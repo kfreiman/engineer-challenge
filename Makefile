@@ -1,4 +1,4 @@
-.PHONY: help start dev up down build logs generate proto clean \
+.PHONY: help start dev up down build logs generate proto clean commit-and-tag-version commit-and-tag-version-dry-run \
 	traefik traefik_logs kratos kratos_db kratos_db_logs kratos_app kratos_app_logs kratos_logs \
 	profile profile_logs billing billing_logs bff bff_logs
 
@@ -132,6 +132,16 @@ proto: ## Generate protobuf definitions
 generate: proto ## Run all code generation
 	# Placeholder for gqlgen commands
 	@echo "Generating GraphQL resolvers..."
+
+# ============================================
+# Versioning & Release
+# ============================================
+
+release: ## Create version commit and tag (interactively)
+	npx commit-and-tag-version
+
+release_dry: ## Create version commit and tag (dry-run preview only)
+	npx commit-and-tag-version --dry-run
 
 # ============================================
 # Cleanup

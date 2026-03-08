@@ -4,7 +4,6 @@ All notable changes to this project will be documented in this file. See [commit
 
 ## 0.0.1 (2026-03-08)
 
-
 ### Features
 
 * init ([3d80785](https://github.com/kfreiman/engineer-challenge/commit/3d80785f4b5160708c530d6ab407acba98b479fe))

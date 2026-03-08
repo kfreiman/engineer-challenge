@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "conventional-commits": {
+      "source": "patricio0312rev/skills",
+      "sourceType": "github",
+      "computedHash": "1a9b826315006b8bf32126c8391f7f11e8ed090b8506f029ccca165cb4f438dc"
+    }
+  }
+}
