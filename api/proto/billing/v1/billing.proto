@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package billing.v1;
+
+option go_package = "platform/pb/billing/v1";
+
+service BillingService {
+  rpc GetSubscriptionStatus(GetSubscriptionRequest) returns (GetSubscriptionResponse);
+}
+
+message GetSubscriptionRequest {
+  string user_id = 1;
+}
+
+message GetSubscriptionResponse {
+  string status = 1;
+}

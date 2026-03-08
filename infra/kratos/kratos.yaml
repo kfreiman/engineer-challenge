@@ -1,0 +1,83 @@
+version: v1.3.0
+dsn: "${DSN}"
+
+# https://raw.githubusercontent.com/ory/kratos/v25.4.0/.schemastore/config.schema.json
+serve:
+  public:
+    base_url: ${SCHEMA}${UI_HOSTNAME}/
+    cors:
+      enabled: true
+  admin:
+    base_url: http://kratos:4434/
+
+selfservice:
+  default_browser_return_url: "${SELFSERVICE_DEFAULT_BROWSER_RETURN_URL}" # must be set by schema, value getting from env setup
+
+  methods:
+    password:
+      enabled: true
+
+  flows:
+    error: {}
+    logout: {}
+
+    login:
+      lifespan: 24h
+      # after:
+      #   hooks:
+      #     - hook: web_hook
+      #       config:
+      #         method: "POST"
+      #         body: base64://ZnVuY3Rpb24oY3R4KSB7IGlkZW50aXR5X2lkOiBjdHguaWRlbnRpdHkuaWQgfQo=
+      #         url: http://msg_server/backend/v1/workspace/create-default
+      #         response:
+      #           ignore: false # Defines if the webhook response should be ignored and run async. Boolean. OPTIONAL
+      #           parse: false
+
+    registration:
+      lifespan: 1h
+      after:
+        password:
+          hooks:
+            - hook: session
+            - hook: web_hook
+              config:
+                method: "POST"
+                body: base64://ZnVuY3Rpb24oY3R4KSB7IGlkZW50aXR5X2lkOiBjdHguaWRlbnRpdHkuaWQgfQo=
+                url: http://orbitto_profile/api/v1/registration # TODO make configurable
+
+    settings:
+      privileged_session_max_age: 1h
+
+session:
+  whoami:
+    required_aal: highest_available
+
+log:
+  level: info
+  format: json
+  leak_sensitive_values: false
+
+secrets:
+  cookie:
+    - vPYo5Z2FWrFxBoj2
+  cipher:
+    - HokkIO69D9xoVRIfESxTXzMSX6JXqeOI
+
+ciphers:
+  algorithm: xchacha20-poly1305
+
+hashers:
+  algorithm: bcrypt
+  bcrypt:
+    cost: 8
+
+identity:
+  default_schema_id: user
+  schemas:
+    - id: user
+      url: file:///etc/config/kratos/user.schema.json
+
+courier:
+  smtp:
+    connection_uri: smtps://test:test@mailslurper:1025/?skip_ssl_verify=true

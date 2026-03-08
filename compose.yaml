@@ -1,0 +1,202 @@
+services:
+  # API Gateway - Traefik
+  orbitto_traefik:
+    image: traefik:3
+    container_name: orbitto_traefik
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=false"
+      - "--providers.file.directory=/etc/traefik/config"
+      - "--providers.file.watch=true"
+      - "--entrypoints.web.address=:80"
+      - "--log.level=${ORBITTO_TRAEFIK_LOG_LEVEL:-INFO}"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - ./infra/traefik/config:/etc/traefik/config
+    networks:
+      - orbitto_net
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8080/dashboard/",
+        ]
+      interval: 5s
+      timeout: 2s
+      retries: 5
+      start_period: 5s
+
+  # Database - PostgreSQL
+  orbitto_kratos_db:
+    image: postgres:18-alpine
+    container_name: orbitto_kratos_db
+    hostname: orbitto_kratos_db
+    environment:
+      POSTGRES_USER: ${ORBITTO_KRATOS_DB_USER:?}
+      POSTGRES_PASSWORD: ${ORBITTO_KRATOS_DB_PASSWORD:?}
+      POSTGRES_DB: ${ORBITTO_KRATOS_DB_NAME:?}
+    volumes:
+      - orbitto_kratos_db_data:/var/lib/postgresql/data
+    networks:
+      - orbitto_net
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${ORBITTO_KRATOS_DB_USER:?} -d ${ORBITTO_KRATOS_DB_NAME:?}",
+        ]
+      interval: 5s
+      timeout: 2s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+  # IAM - Ory Kratos
+  orbitto_kratos:
+    image: oryd/kratos:v25.4
+    container_name: orbitto_kratos
+    environment:
+      DSN: postgres://${ORBITTO_KRATOS_DB_USER:?}:${ORBITTO_KRATOS_DB_PASSWORD:?}@orbitto_kratos_db:5432/${ORBITTO_KRATOS_DB_NAME:?}?sslmode=disable
+      SERVE_PUBLIC_BASE_URL: ${ORBITTO_SCHEMA}${ORBITTO_HOSTNAME}/
+      SELFSERVICE_DEFAULT_BROWSER_RETURN_URL: ${ORBITTO_SCHEMA}${ORBITTO_HOSTNAME}
+      SELFSERVICE_FLOWS_LOGIN_AFTER_DEFAULT_BROWSER_RETURN_URL: ${ORBITTO_SCHEMA}${ORBITTO_HOSTNAME}
+      SELFSERVICE_ALLOWED_RETURN_URLS_0: ${ORBITTO_SCHEMA}${ORBITTO_HOSTNAME}
+      SELFSERVICE_FLOWS_ERROR_UI_URL: ${ORBITTO_SCHEMA}${ORBITTO_HOSTNAME}/auth/error
+      SELFSERVICE_FLOWS_LOGOUT_AFTER_DEFAULT_BROWSER_RETURN_URL: ${ORBITTO_SCHEMA}${ORBITTO_HOSTNAME}
+      SELFSERVICE_FLOWS_LOGIN_UI_URL: ${ORBITTO_SCHEMA}${ORBITTO_HOSTNAME}/auth/login
+      SELFSERVICE_FLOWS_REGISTRATION_UI_URL: ${ORBITTO_SCHEMA}${ORBITTO_HOSTNAME}/auth/registration
+      SELFSERVICE_FLOWS_SETTINGS_UI_URL: ${ORBITTO_SCHEMA}${ORBITTO_HOSTNAME}/auth/settings
+      SECRETS_COOKIE_0: ${ORBITTO_KRATOS_COOKIE_SECRET:?}
+      SECRETS_CIPHER_0: ${ORBITTO_KRATOS_CIPHER_SECRET:?}
+    command: serve -c /etc/config/kratos/kratos.yaml
+    volumes:
+      - ./infra/kratos:/etc/config/kratos
+    networks:
+      - orbitto_net
+    restart: unless-stopped
+    depends_on:
+      orbitto_kratos_db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:4434/health/ready",
+        ]
+      interval: 5s
+      timeout: 2s
+      retries: 5
+      start_period: 5s
+
+  orbitto_kratos_migrate:
+    container_name: orbitto_kratos_migrate
+    image: oryd/kratos:v25.4
+    command: -c /etc/config/kratos/kratos.yaml migrate sql -e --yes
+    volumes:
+      - ./infra/kratos:/etc/config/kratos
+    environment:
+      DSN: postgres://${ORBITTO_KRATOS_DB_USER:?}:${ORBITTO_KRATOS_DB_PASSWORD:?}@${ORBITTO_KRATOS_DB_ADDR:-orbitto_kratos_db}:5432/${ORBITTO_KRATOS_DB_NAME:?}?sslmode=disable&max_conns=20&max_idle_conns=4
+    networks:
+      - orbitto_net
+    restart: on-failure
+
+  # Profile Service
+  orbitto_profile:
+    build:
+      context: .
+      dockerfile: infra/docker/profile/Dockerfile
+    container_name: orbitto_profile
+    environment:
+      PORT: 8081
+      DB_DSN: postgres://${ORBITTO_KRATOS_DB_USER:?}:${ORBITTO_KRATOS_DB_PASSWORD:?}@orbitto_kratos_db:5432/${ORBITTO_KRATOS_DB_NAME:?}?sslmode=disable
+    networks:
+      - orbitto_net
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8081/health",
+        ]
+      interval: 5s
+      timeout: 2s
+      retries: 5
+      start_period: 5s
+
+  # Billing Service
+  orbitto_billing:
+    build:
+      context: .
+      dockerfile: infra/docker/billing/Dockerfile
+    container_name: orbitto_billing
+    environment:
+      PORT: 8082
+      DB_DSN: postgres://${ORBITTO_KRATOS_DB_USER:?}:${ORBITTO_KRATOS_DB_PASSWORD:?}@orbitto_postgres:5432/${ORBITTO_KRATOS_DB_NAME:?}?sslmode=disable
+    networks:
+      - orbitto_net
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8082/health",
+        ]
+      interval: 5s
+      timeout: 2s
+      retries: 5
+      start_period: 5s
+
+  # BFF (GraphQL Gateway)
+  orbitto_bff:
+    build:
+      context: .
+      dockerfile: infra/docker/bff/Dockerfile
+    container_name: orbitto_bff
+    environment:
+      PORT: 3000
+    networks:
+      - orbitto_net
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000/health",
+        ]
+      interval: 5s
+      timeout: 2s
+      retries: 5
+      start_period: 5s
+
+volumes:
+  orbitto_kratos_db_data:
+    driver: local
+    name: orbitto_orbitto_kratos_db_data
+
+networks:
+  orbitto_net:
+    driver: bridge
+    name: orbitto_net

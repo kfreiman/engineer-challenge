@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=https://www.schemastore.org/traefik-v3-file-provider.json
+
+http:
+  routers:
+    bff:
+      rule: "PathPrefix(`/bff`)"
+      entryPoints:
+        - web
+      service: bff
+  services:
+    bff:
+      loadBalancer:
+        servers:
+          - url: "http://bff:3000"

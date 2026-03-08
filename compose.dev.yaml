@@ -1,0 +1,35 @@
+services:
+  # Traefik Development
+  orbitto_traefik:
+    ports:
+      - "${ORBITTO_TRAEFIK_EXPOSE_HTTP_PORT:-80}:80"
+      - "${ORBITTO_TRAEFIK_EXPOSE_DASHBOARD_PORT:-8080}:8080" # Web UI
+
+  # PostgreSQL Development
+  orbitto_kratos_db:
+    ports:
+      - "${ORBITTO_KRATOS_DB_EXPOSE_HTTP_PORT:-5432}:5432"
+
+  # Kratos Development
+  orbitto_kratos:
+    ports:
+      - "${ORBITTO_KRATOS_EXPOSE_PUBLIC_PORT:-4433}:4433" # Public
+      - "${ORBITTO_KRATOS_EXPOSE_ADMIN_PORT:-4434}:4434" # Admin
+    environment:
+      LOG_LEVEL: debug
+    command: serve -c /etc/config/kratos/kratos.yaml --dev
+
+  # Profile Service Development
+  orbitto_profile:
+    ports:
+      - "${ORBITTO_PROFILE_EXPOSE_PORT:-8081}:8000"
+
+  # Billing Service Development
+  orbitto_billing:
+    ports:
+      - "${ORBITTO_BILLING_EXPOSE_PORT:-8082}:8000"
+
+  # BFF (GraphQL Gateway) Development
+  orbitto_bff:
+    ports:
+      - "${ORBITTO_BFF_EXPOSE_PORT:-3000}:3000"
