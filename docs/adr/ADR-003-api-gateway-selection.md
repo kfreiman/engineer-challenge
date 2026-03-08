@@ -1,8 +1,8 @@
 # ADR-003: Выбор API Gateway / Edge Proxy
 
-**Статус:** Proposed  
+**Статус:** Accepted  
 **Дата:** 2026-03-08  
-**Автор:** pi-assistant
+**Автор:** kfreiman
 
 ## 1. Контекст
 
