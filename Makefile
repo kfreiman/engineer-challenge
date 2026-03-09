@@ -93,6 +93,9 @@ dev_billing: ## Start Billing service in development mode
 dev_bff: ## Start BFF service in development mode
 	docker compose -f compose.yaml -f compose.dev.yaml up -d --force-recreate orbitto_bff
 
+dev_web: ## Start web service in development mode
+	docker compose -f compose.yaml -f compose.dev.yaml up -d --force-recreate orbitto_web
+
 # ============================================
 # Standard Commands
 # ============================================

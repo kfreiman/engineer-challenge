@@ -33,3 +33,25 @@ services:
   orbitto_bff:
     ports:
       - "${ORBITTO_BFF_EXPOSE_PORT:-3000}:3000"
+
+  orbitto_web:
+    # use same user to be able
+    build:
+      context: ./web
+      dockerfile: ../infra/docker/web/Dockerfile.dev
+      args:
+        DIR: ${PWD}/web # for better path mapping with host
+    image: orbitto_web:dev
+    ports:
+      - "${ORBITTO_WEB_HOTRELOAD_PORT:-5173}:5173"
+      - "${ORBITTO_WEB_EXPOSE_PORT:-3000}:3000"
+    volumes:
+      - ./web:${PWD}/web:cached
+      - node_modules:${PWD}/web/node_modules
+    command: sh -c "pnpm install && pnpm run dev"
+    environment:
+      NODE_ENV: development
+      CI: true
+
+volumes:
+  node_modules: {}

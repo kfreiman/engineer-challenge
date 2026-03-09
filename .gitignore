@@ -1,1 +1,10 @@
 .idea
+node_modules
+.pnpm-store
+.tanstack
+dist
+dev.db
+dev.db-journal
+.env
+.env.local
+.env.*.local

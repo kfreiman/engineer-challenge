@@ -1,0 +1,13 @@
+http:
+  routers:
+    orbitto_web:
+      rule: "PathPrefix(`/`)" 
+      priority: 1
+      entryPoints:
+        - web
+      service: orbitto_web
+  services:
+    orbitto_web:
+      loadBalancer:
+        servers:
+          - url: "http://orbitto_web:3000"

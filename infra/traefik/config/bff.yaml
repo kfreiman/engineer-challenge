@@ -4,6 +4,7 @@ http:
   routers:
     bff:
       rule: "PathPrefix(`/bff`)"
+      priority: 2
       entryPoints:
         - web
       service: bff

@@ -65,7 +65,7 @@ services:
     environment:
       DSN: postgres://${ORBITTO_KRATOS_DB_USER:?}:${ORBITTO_KRATOS_DB_PASSWORD:?}@orbitto_kratos_db:5432/${ORBITTO_KRATOS_DB_NAME:?}?sslmode=disable
       SERVE_PUBLIC_BASE_URL: ${ORBITTO_SCHEMA}${ORBITTO_HOSTNAME}/
-      SELFSERVICE_DEFAULT_BROWSER_RETURN_URL: ${ORBITTO_SCHEMA}${ORBITTO_HOSTNAME}
+      SELFSERVICE_DEFAULT_BROWSER_RETURN_URL: ${ORBITTO_SCHEMA}${ORBITTO_HOSTNAME}/profile
       SELFSERVICE_FLOWS_LOGIN_AFTER_DEFAULT_BROWSER_RETURN_URL: ${ORBITTO_SCHEMA}${ORBITTO_HOSTNAME}
       SELFSERVICE_ALLOWED_RETURN_URLS_0: ${ORBITTO_SCHEMA}${ORBITTO_HOSTNAME}
       SELFSERVICE_FLOWS_ERROR_UI_URL: ${ORBITTO_SCHEMA}${ORBITTO_HOSTNAME}/auth/error
@@ -190,6 +190,23 @@ services:
       timeout: 2s
       retries: 5
       start_period: 5s
+
+  orbitto_web:
+    container_name: orbitto_web
+    build:
+      context: ./web
+      dockerfile: ../infra/docker/web/Dockerfile # Use the production Dockerfile
+      args:
+        DIR: /app # Consistent WORKDIR
+    # image: orbitto_web:latest
+    environment:
+      VITE_ALLOWED_HOSTS: ${ORBITTO_HOSTNAME}
+      VITE_APP_AUTH_BASEURL: ${ORBITTO_SCHEMA}${ORBITTO_HOSTNAME}
+
+    command: pnpm run start # Explicitly set the start command
+    networks:
+      - orbitto_net
+    restart: unless-stopped
 
 volumes:
   orbitto_kratos_db_data:
