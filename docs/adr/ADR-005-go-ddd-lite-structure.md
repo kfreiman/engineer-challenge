@@ -46,10 +46,8 @@ engineer-challenge/
 │   │   │   ├── http.go         # HTTP handlers
 │   │   │   └── grpc.go         # gRPC handlers
 │   │   │
-│   │   ├── service/             # Сборка Application
-│   │   │   └── application.go  # Wiring всех компонентов
-│   │   │
-│   │   └── main.go              # Entry point контекста
+│   │   └── service/             # Сборка Application
+│   │       └── application.go  # Wiring всех компонентов
 │   │
 │   └── [...другие контексты...]
 │

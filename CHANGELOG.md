@@ -6,5 +6,5 @@ All notable changes to this project will be documented in this file. See [commit
 
 ### Features
 
-* init ([3d80785](https://github.com/kfreiman/engineer-challenge/commit/3d80785f4b5160708c530d6ab407acba98b479fe))
-* initialize authentication microservices infrastructure ([fb74489](https://github.com/kfreiman/engineer-challenge/commit/fb7448932eb7d84154fbdb20ea29a51f985ced26))
+* init ([3d80785](https://github.com/kfreiman/engineer-challengecommit/3d80785f4b5160708c530d6ab407acba98b479fe))
+* initialize authentication microservices infrastructure ([fb74489](https://github.com/kfreiman/engineer-challengecommit/fb7448932eb7d84154fbdb20ea29a51f985ced26))

@@ -1,15 +1,14 @@
-# yaml-language-server: $schema=https://www.schemastore.org/traefik-v3-file-provider.json
-
+# yaml-language-server: $schema=https://raw.githubusercontent.com/traefik/traefik/v3.0/docs/content/reference/dynamic-configuration/file.json
 http:
   routers:
     bff:
-      rule: "PathPrefix(`/bff`)"
-      priority: 2
+      rule: PathPrefix(`/bff`)
+      service: bff
       entryPoints:
         - web
-      service: bff
+      priority: 2
   services:
     bff:
       loadBalancer:
         servers:
-          - url: "http://bff:3000"
+          - url: http://orbitto_core:8080

@@ -6,6 +6,6 @@ export const Route = createFileRoute("/_session/profile")({
 
 function RouteComponent() {
 	return (
-		<div>inner</div>
+		<div>profile</div>
 	)
 }

@@ -111,14 +111,14 @@ services:
       - orbitto_net
     restart: on-failure
 
-  # Profile Service
-  orbitto_profile:
+  # Core Service (ADR-006)
+  orbitto_core:
     build:
       context: .
-      dockerfile: infra/docker/profile/Dockerfile
-    container_name: orbitto_profile
+      dockerfile: infra/docker/core/Dockerfile
+    container_name: orbitto_core
     environment:
-      PORT: 8081
+      PORT: 8080
       DB_DSN: postgres://${ORBITTO_KRATOS_DB_USER:?}:${ORBITTO_KRATOS_DB_PASSWORD:?}@orbitto_kratos_db:5432/${ORBITTO_KRATOS_DB_NAME:?}?sslmode=disable
     networks:
       - orbitto_net
@@ -131,65 +131,13 @@ services:
           "--no-verbose",
           "--tries=1",
           "--spider",
-          "http://localhost:8081/health",
+          "http://localhost:8080/health",
         ]
       interval: 5s
       timeout: 2s
       retries: 5
       start_period: 5s
-
-  # Billing Service
-  orbitto_billing:
-    build:
-      context: .
-      dockerfile: infra/docker/billing/Dockerfile
-    container_name: orbitto_billing
-    environment:
-      PORT: 8082
-      DB_DSN: postgres://${ORBITTO_KRATOS_DB_USER:?}:${ORBITTO_KRATOS_DB_PASSWORD:?}@orbitto_postgres:5432/${ORBITTO_KRATOS_DB_NAME:?}?sslmode=disable
-    networks:
-      - orbitto_net
-    restart: unless-stopped
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "wget",
-          "--no-verbose",
-          "--tries=1",
-          "--spider",
-          "http://localhost:8082/health",
-        ]
-      interval: 5s
-      timeout: 2s
-      retries: 5
-      start_period: 5s
-
-  # BFF (GraphQL Gateway)
-  orbitto_bff:
-    build:
-      context: .
-      dockerfile: infra/docker/bff/Dockerfile
-    container_name: orbitto_bff
-    environment:
-      PORT: 3000
-    networks:
-      - orbitto_net
-    restart: unless-stopped
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "wget",
-          "--no-verbose",
-          "--tries=1",
-          "--spider",
-          "http://localhost:3000/health",
-        ]
-      interval: 5s
-      timeout: 2s
-      retries: 5
-      start_period: 5s
+    command: ["serve"]
 
   orbitto_web:
     container_name: orbitto_web
