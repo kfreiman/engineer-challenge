@@ -72,7 +72,7 @@ export function NavUser({
             <BadgeCheckIcon
             />
             <Link to="/profile">
-              Account
+              Profile
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem>

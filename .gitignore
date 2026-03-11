@@ -9,3 +9,10 @@ dev.db-journal
 .env.local
 .env.*.local
 tmp
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
