@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.2.0](https://github.com/kfreiman/engineer-challenge/compare/v0.1.0...v0.2.0) (2026-03-11)
+
+
+### Features
+
+* **e2e:** add Playwright E2E testing infrastructure ([7252ba4](https://github.com/kfreiman/engineer-challenge/commit/7252ba4c866443bed4f952680717de3291815fa7))
+
 ## [0.1.0](https://github.com/kfreiman/engineer-challenge/compare/v0.0.1...v0.1.0) (2026-03-10)
 
 
