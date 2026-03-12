@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.4.2](https://github.com/kfreiman/engineer-challenge/compare/v0.4.1...v0.4.2) (2026-03-12)
+
+
+### Features
+
+* **web:** add subscription info to profile page with TanStack Query ([7223bfc](https://github.com/kfreiman/engineer-challenge/commit/7223bfc96a897abf80ffb0b6b547a583ca480185))
+
 ## [0.4.1](https://github.com/kfreiman/engineer-challenge/compare/v0.4.0...v0.4.1) (2026-03-12)
 
 ## [0.4.0](https://github.com/kfreiman/engineer-challenge/compare/v0.3.0...v0.4.0) (2026-03-12)
