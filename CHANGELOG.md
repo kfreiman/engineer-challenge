@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.3.0](https://github.com/kfreiman/engineer-challenge/compare/v0.2.0...v0.3.0) (2026-03-12)
+
+
+### Features
+
+* **auth:** implement account recovery and complete auth flows ([a995d21](https://github.com/kfreiman/engineer-challenge/commit/a995d2116ad3dc6e52dd5af4c8dca1894854f166))
+
 ## [0.2.0](https://github.com/kfreiman/engineer-challenge/compare/v0.1.0...v0.2.0) (2026-03-11)
 
 
