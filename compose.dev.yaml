@@ -54,10 +54,6 @@ services:
       - "${ORBITTO_PLAYGROUND_EXPOSE_PORT:-8083}:8082"
     volumes:
       - ${PWD}:${PWD}
-    environment:
-      HTTP_PORT: 8080
-      HTTP_BFF_PORT: 8081
-      HTTP_PLAYGROUND_PORT: 8082
 
   orbitto_mailpit:
     ports:

@@ -9,11 +9,11 @@ import (
 	"fmt"
 	"strconv"
 	"sync/atomic"
+	"time"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/introspection"
-	entity1 "github.com/kfreiman/engineer-challenge/internal/billing/domain/entity"
-	"github.com/kfreiman/engineer-challenge/internal/profile/domain/entity"
+	"github.com/kfreiman/engineer-challenge/internal/bff/ports/graphql/model"
 	gqlparser "github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
 )
@@ -31,20 +31,19 @@ type ResolverRoot interface {
 	Mutation() MutationResolver
 	Query() QueryResolver
 	Subscription() SubscriptionResolver
-	User() UserResolver
 }
 
 type DirectiveRoot struct {
+	Auth func(ctx context.Context, obj any, next graphql.Resolver) (res any, err error)
 }
 
 type ComplexityRoot struct {
 	Mutation struct {
-		UpdateProfile func(childComplexity int, fullName string) int
+		UpdateProfile func(childComplexity int, input model.UpdateProfileInput) int
 	}
 
 	Query struct {
-		Me   func(childComplexity int) int
-		User func(childComplexity int, id string) int
+		Me func(childComplexity int) int
 	}
 
 	Subscription struct {
@@ -52,6 +51,19 @@ type ComplexityRoot struct {
 		ExpiresAt func(childComplexity int) int
 		Plan      func(childComplexity int) int
 		Status    func(childComplexity int) int
+	}
+
+	UnauthenticatedError struct {
+		Message func(childComplexity int) int
+	}
+
+	UnauthorizedError struct {
+		Message            func(childComplexity int) int
+		RequiredPermission func(childComplexity int) int
+	}
+
+	UpdateProfileSuccess struct {
+		User func(childComplexity int) int
 	}
 
 	User struct {
@@ -62,26 +74,24 @@ type ComplexityRoot struct {
 		Subscription func(childComplexity int) int
 		UpdatedAt    func(childComplexity int) int
 	}
+
+	ValidationError struct {
+		Field   func(childComplexity int) int
+		Message func(childComplexity int) int
+	}
 }
 
 type MutationResolver interface {
-	UpdateProfile(ctx context.Context, fullName string) (*entity.Profile, error)
+	UpdateProfile(ctx context.Context, input model.UpdateProfileInput) (model.UpdateProfileResult, error)
 }
 type QueryResolver interface {
-	Me(ctx context.Context) (*entity.Profile, error)
-	User(ctx context.Context, id string) (*entity.Profile, error)
+	Me(ctx context.Context) (model.MeResult, error)
 }
 type SubscriptionResolver interface {
-	Plan(ctx context.Context) (<-chan entity1.Plan, error)
-	Status(ctx context.Context) (<-chan entity1.Status, error)
-	ExpiresAt(ctx context.Context) (<-chan *string, error)
-	CreatedAt(ctx context.Context) (<-chan string, error)
-}
-type UserResolver interface {
-	ID(ctx context.Context, obj *entity.Profile) (string, error)
-
-	CreatedAt(ctx context.Context, obj *entity.Profile) (string, error)
-	UpdatedAt(ctx context.Context, obj *entity.Profile) (string, error)
+	Plan(ctx context.Context) (<-chan model.SubscriptionPlan, error)
+	Status(ctx context.Context) (<-chan model.SubscriptionStatus, error)
+	ExpiresAt(ctx context.Context) (<-chan *time.Time, error)
+	CreatedAt(ctx context.Context) (<-chan *time.Time, error)
 }
 
 type executableSchema graphql.ExecutableSchemaState[ResolverRoot, DirectiveRoot, ComplexityRoot]
@@ -108,7 +118,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Mutation.UpdateProfile(childComplexity, args["fullName"].(string)), true
+		return e.ComplexityRoot.Mutation.UpdateProfile(childComplexity, args["input"].(model.UpdateProfileInput)), true
 
 	case "Query.me":
 		if e.ComplexityRoot.Query.Me == nil {
@@ -116,17 +126,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.Me(childComplexity), true
-	case "Query.user":
-		if e.ComplexityRoot.Query.User == nil {
-			break
-		}
-
-		args, err := ec.field_Query_user_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.ComplexityRoot.Query.User(childComplexity, args["id"].(string)), true
 
 	case "Subscription.createdAt":
 		if e.ComplexityRoot.Subscription.CreatedAt == nil {
@@ -152,6 +151,33 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Subscription.Status(childComplexity), true
+
+	case "UnauthenticatedError.message":
+		if e.ComplexityRoot.UnauthenticatedError.Message == nil {
+			break
+		}
+
+		return e.ComplexityRoot.UnauthenticatedError.Message(childComplexity), true
+
+	case "UnauthorizedError.message":
+		if e.ComplexityRoot.UnauthorizedError.Message == nil {
+			break
+		}
+
+		return e.ComplexityRoot.UnauthorizedError.Message(childComplexity), true
+	case "UnauthorizedError.requiredPermission":
+		if e.ComplexityRoot.UnauthorizedError.RequiredPermission == nil {
+			break
+		}
+
+		return e.ComplexityRoot.UnauthorizedError.RequiredPermission(childComplexity), true
+
+	case "UpdateProfileSuccess.user":
+		if e.ComplexityRoot.UpdateProfileSuccess.User == nil {
+			break
+		}
+
+		return e.ComplexityRoot.UpdateProfileSuccess.User(childComplexity), true
 
 	case "User.createdAt":
 		if e.ComplexityRoot.User.CreatedAt == nil {
@@ -190,6 +216,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.User.UpdatedAt(childComplexity), true
 
+	case "ValidationError.field":
+		if e.ComplexityRoot.ValidationError.Field == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ValidationError.Field(childComplexity), true
+	case "ValidationError.message":
+		if e.ComplexityRoot.ValidationError.Message == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ValidationError.Message(childComplexity), true
+
 	}
 	return 0, false
 }
@@ -197,7 +236,9 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	opCtx := graphql.GetOperationContext(ctx)
 	ec := newExecutionContext(opCtx, e, make(chan graphql.DeferredResult))
-	inputUnmarshalMap := graphql.BuildUnmarshalerMap()
+	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
+		ec.unmarshalInputUpdateProfileInput,
+	)
 	first := true
 
 	switch opCtx.Operation.Operation {
@@ -289,36 +330,169 @@ func newExecutionContext(
 }
 
 var sources = []*ast.Source{
-	{Name: "../../../../api/graphql/schema.graphql", Input: `type Query {
-  me: User!
-  user(id: ID!): User
+	{Name: "../../../../api/graphql/schema.graphql", Input: `"""
+A scale representing a date and time in ISO 8601 format.
+"""
+scalar DateTime
+
+"""
+An object with a globally unique ID.
+"""
+interface Node {
+  """
+  The ID of the object.
+  """
+  id: ID!
 }
+
+"""
+Standard error interface.
+"""
+interface Error {
+  """
+  A human-readable error message.
+  """
+  message: String!
+}
+
+"""
+Returned when a user attempts an action they don't have permission for.
+"""
+type UnauthorizedError implements Error {
+  message: String!
+  """
+  The permission that was required but missing.
+  """
+  requiredPermission: String
+}
+
+"""
+Returned when the user is not authenticated.
+"""
+type UnauthenticatedError implements Error {
+  message: String!
+}
+
+"""
+Returned when input validation fails.
+"""
+type ValidationError implements Error {
+  message: String!
+  """
+  The field that caused the validation error.
+  """
+  field: String
+}
+
+"""
+Directive to mark a field as requiring authentication.
+"""
+directive @auth on FIELD_DEFINITION
+
+type Query {
+  """
+  The currently authenticated user.
+  """
+  me: MeResult! @auth
+}
+
+"""
+The result of the 'me' query.
+"""
+union MeResult = User | UnauthenticatedError
 
 type Mutation {
-  updateProfile(fullName: String!): User!
+  """
+  Updates the profile of the currently authenticated user.
+  """
+  updateProfile(input: UpdateProfileInput!): UpdateProfileResult! @auth
 }
 
-type User {
+"""
+Input for updating a user profile.
+"""
+input UpdateProfileInput {
+  """
+  The new full name of the user.
+  """
+  fullName: String!
+}
+
+"""
+The result of the 'updateProfile' mutation.
+"""
+union UpdateProfileResult = UpdateProfileSuccess | ValidationError | UnauthorizedError | UnauthenticatedError
+
+"""
+Returned when the profile update is successful.
+"""
+type UpdateProfileSuccess {
+  """
+  The updated user object.
+  """
+  user: User!
+}
+
+"""
+A user account in the system.
+"""
+type User implements Node {
   id: ID!
+  """
+  The user's email address.
+  """
   email: String!
+  """
+  The user's full name.
+  """
   fullName: String
+  """
+  The user's current subscription details.
+  """
   subscription: Subscription
-  createdAt: String!
-  updatedAt: String!
+  """
+  When the user account was created.
+  """
+  createdAt: DateTime!
+  """
+  When the user account was last updated.
+  """
+  updatedAt: DateTime!
 }
 
+"""
+Information about a user's subscription.
+"""
 type Subscription {
+  """
+  The subscription tier.
+  """
   plan: SubscriptionPlan!
+  """
+  The current status of the subscription.
+  """
   status: SubscriptionStatus!
-  expiresAt: String
-  createdAt: String!
+  """
+  When the subscription is set to expire.
+  """
+  expiresAt: DateTime
+  """
+  When the subscription was created.
+  """
+  createdAt: DateTime!
 }
 
+"""
+Available subscription tiers.
+"""
 enum SubscriptionPlan {
   FREE
   PRO
 }
 
+"""
+Current status of a subscription.
+"""
 enum SubscriptionStatus {
   ACTIVE
   INACTIVE
@@ -334,11 +508,11 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 func (ec *executionContext) field_Mutation_updateProfile_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "fullName", ec.unmarshalNString2string)
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNUpdateProfileInput2githubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋbffᚋportsᚋgraphqlᚋmodelᚐUpdateProfileInput)
 	if err != nil {
 		return nil, err
 	}
-	args["fullName"] = arg0
+	args["input"] = arg0
 	return args, nil
 }
 
@@ -350,17 +524,6 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 		return nil, err
 	}
 	args["name"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Query_user_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id", ec.unmarshalNID2string)
-	if err != nil {
-		return nil, err
-	}
-	args["id"] = arg0
 	return args, nil
 }
 
@@ -424,10 +587,23 @@ func (ec *executionContext) _Mutation_updateProfile(ctx context.Context, field g
 		ec.fieldContext_Mutation_updateProfile,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Mutation().UpdateProfile(ctx, fc.Args["fullName"].(string))
+			return ec.Resolvers.Mutation().UpdateProfile(ctx, fc.Args["input"].(model.UpdateProfileInput))
 		},
-		nil,
-		ec.marshalNUser2ᚖgithubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋprofileᚋdomainᚋentityᚐProfile,
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				if ec.Directives.Auth == nil {
+					var zeroVal model.UpdateProfileResult
+					return zeroVal, errors.New("directive auth is not implemented")
+				}
+				return ec.Directives.Auth(ctx, nil, directive0)
+			}
+
+			next = directive1
+			return next
+		},
+		ec.marshalNUpdateProfileResult2githubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋbffᚋportsᚋgraphqlᚋmodelᚐUpdateProfileResult,
 		true,
 		true,
 	)
@@ -440,21 +616,7 @@ func (ec *executionContext) fieldContext_Mutation_updateProfile(ctx context.Cont
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_User_id(ctx, field)
-			case "email":
-				return ec.fieldContext_User_email(ctx, field)
-			case "fullName":
-				return ec.fieldContext_User_fullName(ctx, field)
-			case "subscription":
-				return ec.fieldContext_User_subscription(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_User_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_User_updatedAt(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+			return nil, errors.New("field of type UpdateProfileResult does not have child fields")
 		},
 	}
 	defer func() {
@@ -480,8 +642,21 @@ func (ec *executionContext) _Query_me(ctx context.Context, field graphql.Collect
 		func(ctx context.Context) (any, error) {
 			return ec.Resolvers.Query().Me(ctx)
 		},
-		nil,
-		ec.marshalNUser2ᚖgithubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋprofileᚋdomainᚋentityᚐProfile,
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				if ec.Directives.Auth == nil {
+					var zeroVal model.MeResult
+					return zeroVal, errors.New("directive auth is not implemented")
+				}
+				return ec.Directives.Auth(ctx, nil, directive0)
+			}
+
+			next = directive1
+			return next
+		},
+		ec.marshalNMeResult2githubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋbffᚋportsᚋgraphqlᚋmodelᚐMeResult,
 		true,
 		true,
 	)
@@ -494,77 +669,8 @@ func (ec *executionContext) fieldContext_Query_me(_ context.Context, field graph
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_User_id(ctx, field)
-			case "email":
-				return ec.fieldContext_User_email(ctx, field)
-			case "fullName":
-				return ec.fieldContext_User_fullName(ctx, field)
-			case "subscription":
-				return ec.fieldContext_User_subscription(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_User_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_User_updatedAt(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+			return nil, errors.New("field of type MeResult does not have child fields")
 		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Query_user(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Query_user,
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Query().User(ctx, fc.Args["id"].(string))
-		},
-		nil,
-		ec.marshalOUser2ᚖgithubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋprofileᚋdomainᚋentityᚐProfile,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_Query_user(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_User_id(ctx, field)
-			case "email":
-				return ec.fieldContext_User_email(ctx, field)
-			case "fullName":
-				return ec.fieldContext_User_fullName(ctx, field)
-			case "subscription":
-				return ec.fieldContext_User_subscription(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_User_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_User_updatedAt(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_user_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
 	}
 	return fc, nil
 }
@@ -687,7 +793,7 @@ func (ec *executionContext) _Subscription_plan(ctx context.Context, field graphq
 			return ec.Resolvers.Subscription().Plan(ctx)
 		},
 		nil,
-		ec.marshalNSubscriptionPlan2githubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋbillingᚋdomainᚋentityᚐPlan,
+		ec.marshalNSubscriptionPlan2githubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋbffᚋportsᚋgraphqlᚋmodelᚐSubscriptionPlan,
 		true,
 		true,
 	)
@@ -716,7 +822,7 @@ func (ec *executionContext) _Subscription_status(ctx context.Context, field grap
 			return ec.Resolvers.Subscription().Status(ctx)
 		},
 		nil,
-		ec.marshalNSubscriptionStatus2githubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋbillingᚋdomainᚋentityᚐStatus,
+		ec.marshalNSubscriptionStatus2githubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋbffᚋportsᚋgraphqlᚋmodelᚐSubscriptionStatus,
 		true,
 		true,
 	)
@@ -745,7 +851,7 @@ func (ec *executionContext) _Subscription_expiresAt(ctx context.Context, field g
 			return ec.Resolvers.Subscription().ExpiresAt(ctx)
 		},
 		nil,
-		ec.marshalOString2ᚖstring,
+		ec.marshalODateTime2ᚖtimeᚐTime,
 		true,
 		false,
 	)
@@ -758,7 +864,7 @@ func (ec *executionContext) fieldContext_Subscription_expiresAt(_ context.Contex
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
+			return nil, errors.New("field of type DateTime does not have child fields")
 		},
 	}
 	return fc, nil
@@ -774,7 +880,7 @@ func (ec *executionContext) _Subscription_createdAt(ctx context.Context, field g
 			return ec.Resolvers.Subscription().CreatedAt(ctx)
 		},
 		nil,
-		ec.marshalNString2string,
+		ec.marshalNDateTime2ᚖtimeᚐTime,
 		true,
 		true,
 	)
@@ -787,20 +893,150 @@ func (ec *executionContext) fieldContext_Subscription_createdAt(_ context.Contex
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type DateTime does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UnauthenticatedError_message(ctx context.Context, field graphql.CollectedField, obj *model.UnauthenticatedError) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_UnauthenticatedError_message,
+		func(ctx context.Context) (any, error) {
+			return obj.Message, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_UnauthenticatedError_message(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UnauthenticatedError",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
 }
 
-func (ec *executionContext) _User_id(ctx context.Context, field graphql.CollectedField, obj *entity.Profile) (ret graphql.Marshaler) {
+func (ec *executionContext) _UnauthorizedError_message(ctx context.Context, field graphql.CollectedField, obj *model.UnauthorizedError) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_UnauthorizedError_message,
+		func(ctx context.Context) (any, error) {
+			return obj.Message, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_UnauthorizedError_message(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UnauthorizedError",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UnauthorizedError_requiredPermission(ctx context.Context, field graphql.CollectedField, obj *model.UnauthorizedError) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_UnauthorizedError_requiredPermission,
+		func(ctx context.Context) (any, error) {
+			return obj.RequiredPermission, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_UnauthorizedError_requiredPermission(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UnauthorizedError",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UpdateProfileSuccess_user(ctx context.Context, field graphql.CollectedField, obj *model.UpdateProfileSuccess) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_UpdateProfileSuccess_user,
+		func(ctx context.Context) (any, error) {
+			return obj.User, nil
+		},
+		nil,
+		ec.marshalNUser2ᚖgithubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋbffᚋportsᚋgraphqlᚋmodelᚐUser,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_UpdateProfileSuccess_user(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UpdateProfileSuccess",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "fullName":
+				return ec.fieldContext_User_fullName(ctx, field)
+			case "subscription":
+				return ec.fieldContext_User_subscription(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_User_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_User_updatedAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _User_id(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		ec.fieldContext_User_id,
 		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.User().ID(ctx, obj)
+			return obj.ID, nil
 		},
 		nil,
 		ec.marshalNID2string,
@@ -813,8 +1049,8 @@ func (ec *executionContext) fieldContext_User_id(_ context.Context, field graphq
 	fc = &graphql.FieldContext{
 		Object:     "User",
 		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type ID does not have child fields")
 		},
@@ -822,14 +1058,14 @@ func (ec *executionContext) fieldContext_User_id(_ context.Context, field graphq
 	return fc, nil
 }
 
-func (ec *executionContext) _User_email(ctx context.Context, field graphql.CollectedField, obj *entity.Profile) (ret graphql.Marshaler) {
+func (ec *executionContext) _User_email(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		ec.fieldContext_User_email,
 		func(ctx context.Context) (any, error) {
-			return obj.Email(), nil
+			return obj.Email, nil
 		},
 		nil,
 		ec.marshalNString2string,
@@ -842,7 +1078,7 @@ func (ec *executionContext) fieldContext_User_email(_ context.Context, field gra
 	fc = &graphql.FieldContext{
 		Object:     "User",
 		Field:      field,
-		IsMethod:   true,
+		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
@@ -851,17 +1087,17 @@ func (ec *executionContext) fieldContext_User_email(_ context.Context, field gra
 	return fc, nil
 }
 
-func (ec *executionContext) _User_fullName(ctx context.Context, field graphql.CollectedField, obj *entity.Profile) (ret graphql.Marshaler) {
+func (ec *executionContext) _User_fullName(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		ec.fieldContext_User_fullName,
 		func(ctx context.Context) (any, error) {
-			return obj.FullName(), nil
+			return obj.FullName, nil
 		},
 		nil,
-		ec.marshalOString2string,
+		ec.marshalOString2ᚖstring,
 		true,
 		false,
 	)
@@ -871,7 +1107,7 @@ func (ec *executionContext) fieldContext_User_fullName(_ context.Context, field 
 	fc = &graphql.FieldContext{
 		Object:     "User",
 		Field:      field,
-		IsMethod:   true,
+		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
@@ -880,7 +1116,7 @@ func (ec *executionContext) fieldContext_User_fullName(_ context.Context, field 
 	return fc, nil
 }
 
-func (ec *executionContext) _User_subscription(ctx context.Context, field graphql.CollectedField, obj *entity.Profile) (ret graphql.Marshaler) {
+func (ec *executionContext) _User_subscription(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_User_subscription(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -892,9 +1128,9 @@ func (ec *executionContext) _User_subscription(ctx context.Context, field graphq
 			ret = graphql.Null
 		}
 	}()
-	res := &entity1.Subscription{}
+	res := &model.Subscription{}
 	fc.Result = res
-	return ec.marshalOSubscription2ᚖgithubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋbillingᚋdomainᚋentityᚐSubscription(ctx, field.Selections, res)
+	return ec.marshalOSubscription2ᚖgithubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋbffᚋportsᚋgraphqlᚋmodelᚐSubscription(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_User_subscription(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -920,17 +1156,17 @@ func (ec *executionContext) fieldContext_User_subscription(_ context.Context, fi
 	return fc, nil
 }
 
-func (ec *executionContext) _User_createdAt(ctx context.Context, field graphql.CollectedField, obj *entity.Profile) (ret graphql.Marshaler) {
+func (ec *executionContext) _User_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		ec.fieldContext_User_createdAt,
 		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.User().CreatedAt(ctx, obj)
+			return obj.CreatedAt, nil
 		},
 		nil,
-		ec.marshalNString2string,
+		ec.marshalNDateTime2timeᚐTime,
 		true,
 		true,
 	)
@@ -940,26 +1176,26 @@ func (ec *executionContext) fieldContext_User_createdAt(_ context.Context, field
 	fc = &graphql.FieldContext{
 		Object:     "User",
 		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
+			return nil, errors.New("field of type DateTime does not have child fields")
 		},
 	}
 	return fc, nil
 }
 
-func (ec *executionContext) _User_updatedAt(ctx context.Context, field graphql.CollectedField, obj *entity.Profile) (ret graphql.Marshaler) {
+func (ec *executionContext) _User_updatedAt(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		ec.fieldContext_User_updatedAt,
 		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.User().UpdatedAt(ctx, obj)
+			return obj.UpdatedAt, nil
 		},
 		nil,
-		ec.marshalNString2string,
+		ec.marshalNDateTime2timeᚐTime,
 		true,
 		true,
 	)
@@ -969,8 +1205,66 @@ func (ec *executionContext) fieldContext_User_updatedAt(_ context.Context, field
 	fc = &graphql.FieldContext{
 		Object:     "User",
 		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type DateTime does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ValidationError_message(ctx context.Context, field graphql.CollectedField, obj *model.ValidationError) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ValidationError_message,
+		func(ctx context.Context) (any, error) {
+			return obj.Message, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ValidationError_message(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ValidationError",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ValidationError_field(ctx context.Context, field graphql.CollectedField, obj *model.ValidationError) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ValidationError_field,
+		func(ctx context.Context) (any, error) {
+			return obj.Field, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_ValidationError_field(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ValidationError",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
 		},
@@ -2424,9 +2718,161 @@ func (ec *executionContext) fieldContext___Type_isOneOf(_ context.Context, field
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputUpdateProfileInput(ctx context.Context, obj any) (model.UpdateProfileInput, error) {
+	var it model.UpdateProfileInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"fullName"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "fullName":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("fullName"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.FullName = data
+		}
+	}
+	return it, nil
+}
+
 // endregion **************************** input.gotpl *****************************
 
 // region    ************************** interface.gotpl ***************************
+
+func (ec *executionContext) _Error(ctx context.Context, sel ast.SelectionSet, obj model.Error) graphql.Marshaler {
+	switch obj := (obj).(type) {
+	case nil:
+		return graphql.Null
+	case model.ValidationError:
+		return ec._ValidationError(ctx, sel, &obj)
+	case *model.ValidationError:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._ValidationError(ctx, sel, obj)
+	case model.UnauthorizedError:
+		return ec._UnauthorizedError(ctx, sel, &obj)
+	case *model.UnauthorizedError:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._UnauthorizedError(ctx, sel, obj)
+	case model.UnauthenticatedError:
+		return ec._UnauthenticatedError(ctx, sel, &obj)
+	case *model.UnauthenticatedError:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._UnauthenticatedError(ctx, sel, obj)
+	default:
+		if typedObj, ok := obj.(graphql.Marshaler); ok {
+			return typedObj
+		} else {
+			panic(fmt.Errorf("unexpected type %T; non-generated variants of Error must implement graphql.Marshaler", obj))
+		}
+	}
+}
+
+func (ec *executionContext) _MeResult(ctx context.Context, sel ast.SelectionSet, obj model.MeResult) graphql.Marshaler {
+	switch obj := (obj).(type) {
+	case nil:
+		return graphql.Null
+	case model.User:
+		return ec._User(ctx, sel, &obj)
+	case *model.User:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._User(ctx, sel, obj)
+	case model.UnauthenticatedError:
+		return ec._UnauthenticatedError(ctx, sel, &obj)
+	case *model.UnauthenticatedError:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._UnauthenticatedError(ctx, sel, obj)
+	default:
+		if typedObj, ok := obj.(graphql.Marshaler); ok {
+			return typedObj
+		} else {
+			panic(fmt.Errorf("unexpected type %T; non-generated variants of MeResult must implement graphql.Marshaler", obj))
+		}
+	}
+}
+
+func (ec *executionContext) _Node(ctx context.Context, sel ast.SelectionSet, obj model.Node) graphql.Marshaler {
+	switch obj := (obj).(type) {
+	case nil:
+		return graphql.Null
+	case model.User:
+		return ec._User(ctx, sel, &obj)
+	case *model.User:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._User(ctx, sel, obj)
+	default:
+		if typedObj, ok := obj.(graphql.Marshaler); ok {
+			return typedObj
+		} else {
+			panic(fmt.Errorf("unexpected type %T; non-generated variants of Node must implement graphql.Marshaler", obj))
+		}
+	}
+}
+
+func (ec *executionContext) _UpdateProfileResult(ctx context.Context, sel ast.SelectionSet, obj model.UpdateProfileResult) graphql.Marshaler {
+	switch obj := (obj).(type) {
+	case nil:
+		return graphql.Null
+	case model.ValidationError:
+		return ec._ValidationError(ctx, sel, &obj)
+	case *model.ValidationError:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._ValidationError(ctx, sel, obj)
+	case model.UnauthorizedError:
+		return ec._UnauthorizedError(ctx, sel, &obj)
+	case *model.UnauthorizedError:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._UnauthorizedError(ctx, sel, obj)
+	case model.UnauthenticatedError:
+		return ec._UnauthenticatedError(ctx, sel, &obj)
+	case *model.UnauthenticatedError:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._UnauthenticatedError(ctx, sel, obj)
+	case model.UpdateProfileSuccess:
+		return ec._UpdateProfileSuccess(ctx, sel, &obj)
+	case *model.UpdateProfileSuccess:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._UpdateProfileSuccess(ctx, sel, obj)
+	default:
+		if typedObj, ok := obj.(graphql.Marshaler); ok {
+			return typedObj
+		} else {
+			panic(fmt.Errorf("unexpected type %T; non-generated variants of UpdateProfileResult must implement graphql.Marshaler", obj))
+		}
+	}
+}
 
 // endregion ************************** interface.gotpl ***************************
 
@@ -2522,25 +2968,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "user":
-			field := field
-
-			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_user(ctx, field)
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx,
-					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "__type":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Query___type(ctx, field)
@@ -2598,9 +3025,128 @@ func (ec *executionContext) _Subscription(ctx context.Context, sel ast.Selection
 	}
 }
 
-var userImplementors = []string{"User"}
+var unauthenticatedErrorImplementors = []string{"UnauthenticatedError", "Error", "MeResult", "UpdateProfileResult"}
 
-func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj *entity.Profile) graphql.Marshaler {
+func (ec *executionContext) _UnauthenticatedError(ctx context.Context, sel ast.SelectionSet, obj *model.UnauthenticatedError) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, unauthenticatedErrorImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("UnauthenticatedError")
+		case "message":
+			out.Values[i] = ec._UnauthenticatedError_message(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var unauthorizedErrorImplementors = []string{"UnauthorizedError", "Error", "UpdateProfileResult"}
+
+func (ec *executionContext) _UnauthorizedError(ctx context.Context, sel ast.SelectionSet, obj *model.UnauthorizedError) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, unauthorizedErrorImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("UnauthorizedError")
+		case "message":
+			out.Values[i] = ec._UnauthorizedError_message(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "requiredPermission":
+			out.Values[i] = ec._UnauthorizedError_requiredPermission(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var updateProfileSuccessImplementors = []string{"UpdateProfileSuccess", "UpdateProfileResult"}
+
+func (ec *executionContext) _UpdateProfileSuccess(ctx context.Context, sel ast.SelectionSet, obj *model.UpdateProfileSuccess) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, updateProfileSuccessImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("UpdateProfileSuccess")
+		case "user":
+			out.Values[i] = ec._UpdateProfileSuccess_user(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var userImplementors = []string{"User", "MeResult", "Node"}
+
+func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj *model.User) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, userImplementors)
 
 	out := graphql.NewFieldSet(fields)
@@ -2610,122 +3156,70 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("User")
 		case "id":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._User_id(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
+			out.Values[i] = ec._User_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
 			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "email":
 			out.Values[i] = ec._User_email(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
+				out.Invalids++
 			}
 		case "fullName":
 			out.Values[i] = ec._User_fullName(ctx, field, obj)
 		case "subscription":
 			out.Values[i] = ec._User_subscription(ctx, field, obj)
 		case "createdAt":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._User_createdAt(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
+			out.Values[i] = ec._User_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
 			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "updatedAt":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._User_updatedAt(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
+			out.Values[i] = ec._User_updatedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
 			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
 
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var validationErrorImplementors = []string{"ValidationError", "Error", "UpdateProfileResult"}
+
+func (ec *executionContext) _ValidationError(ctx context.Context, sel ast.SelectionSet, obj *model.ValidationError) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, validationErrorImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ValidationError")
+		case "message":
+			out.Values[i] = ec._ValidationError_message(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
 			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "field":
+			out.Values[i] = ec._ValidationError_field(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -3100,6 +3594,44 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
+func (ec *executionContext) unmarshalNDateTime2timeᚐTime(ctx context.Context, v any) (time.Time, error) {
+	res, err := graphql.UnmarshalTime(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNDateTime2timeᚐTime(ctx context.Context, sel ast.SelectionSet, v time.Time) graphql.Marshaler {
+	_ = sel
+	res := graphql.MarshalTime(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
+}
+
+func (ec *executionContext) unmarshalNDateTime2ᚖtimeᚐTime(ctx context.Context, v any) (*time.Time, error) {
+	res, err := graphql.UnmarshalTime(v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNDateTime2ᚖtimeᚐTime(ctx context.Context, sel ast.SelectionSet, v *time.Time) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	_ = sel
+	res := graphql.MarshalTime(*v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
+}
+
 func (ec *executionContext) unmarshalNID2string(ctx context.Context, v any) (string, error) {
 	res, err := graphql.UnmarshalID(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -3114,6 +3646,16 @@ func (ec *executionContext) marshalNID2string(ctx context.Context, sel ast.Selec
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) marshalNMeResult2githubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋbffᚋportsᚋgraphqlᚋmodelᚐMeResult(ctx context.Context, sel ast.SelectionSet, v model.MeResult) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._MeResult(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v any) (string, error) {
@@ -3132,45 +3674,42 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 	return res
 }
 
-func (ec *executionContext) unmarshalNSubscriptionPlan2githubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋbillingᚋdomainᚋentityᚐPlan(ctx context.Context, v any) (entity1.Plan, error) {
-	tmp, err := graphql.UnmarshalString(v)
-	res := entity1.Plan(tmp)
+func (ec *executionContext) unmarshalNSubscriptionPlan2githubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋbffᚋportsᚋgraphqlᚋmodelᚐSubscriptionPlan(ctx context.Context, v any) (model.SubscriptionPlan, error) {
+	var res model.SubscriptionPlan
+	err := res.UnmarshalGQL(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNSubscriptionPlan2githubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋbillingᚋdomainᚋentityᚐPlan(ctx context.Context, sel ast.SelectionSet, v entity1.Plan) graphql.Marshaler {
-	_ = sel
-	res := graphql.MarshalString(string(v))
-	if res == graphql.Null {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
-		}
-	}
-	return res
+func (ec *executionContext) marshalNSubscriptionPlan2githubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋbffᚋportsᚋgraphqlᚋmodelᚐSubscriptionPlan(ctx context.Context, sel ast.SelectionSet, v model.SubscriptionPlan) graphql.Marshaler {
+	return v
 }
 
-func (ec *executionContext) unmarshalNSubscriptionStatus2githubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋbillingᚋdomainᚋentityᚐStatus(ctx context.Context, v any) (entity1.Status, error) {
-	tmp, err := graphql.UnmarshalString(v)
-	res := entity1.Status(tmp)
+func (ec *executionContext) unmarshalNSubscriptionStatus2githubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋbffᚋportsᚋgraphqlᚋmodelᚐSubscriptionStatus(ctx context.Context, v any) (model.SubscriptionStatus, error) {
+	var res model.SubscriptionStatus
+	err := res.UnmarshalGQL(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNSubscriptionStatus2githubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋbillingᚋdomainᚋentityᚐStatus(ctx context.Context, sel ast.SelectionSet, v entity1.Status) graphql.Marshaler {
-	_ = sel
-	res := graphql.MarshalString(string(v))
-	if res == graphql.Null {
+func (ec *executionContext) marshalNSubscriptionStatus2githubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋbffᚋportsᚋgraphqlᚋmodelᚐSubscriptionStatus(ctx context.Context, sel ast.SelectionSet, v model.SubscriptionStatus) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalNUpdateProfileInput2githubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋbffᚋportsᚋgraphqlᚋmodelᚐUpdateProfileInput(ctx context.Context, v any) (model.UpdateProfileInput, error) {
+	res, err := ec.unmarshalInputUpdateProfileInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNUpdateProfileResult2githubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋbffᚋportsᚋgraphqlᚋmodelᚐUpdateProfileResult(ctx context.Context, sel ast.SelectionSet, v model.UpdateProfileResult) graphql.Marshaler {
+	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
 		}
+		return graphql.Null
 	}
-	return res
+	return ec._UpdateProfileResult(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNUser2githubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋprofileᚋdomainᚋentityᚐProfile(ctx context.Context, sel ast.SelectionSet, v entity.Profile) graphql.Marshaler {
-	return ec._User(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNUser2ᚖgithubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋprofileᚋdomainᚋentityᚐProfile(ctx context.Context, sel ast.SelectionSet, v *entity.Profile) graphql.Marshaler {
+func (ec *executionContext) marshalNUser2ᚖgithubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋbffᚋportsᚋgraphqlᚋmodelᚐUser(ctx context.Context, sel ast.SelectionSet, v *model.User) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
@@ -3351,15 +3890,21 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	return res
 }
 
-func (ec *executionContext) unmarshalOString2string(ctx context.Context, v any) (string, error) {
-	res, err := graphql.UnmarshalString(v)
-	return res, graphql.ErrorOnPath(ctx, err)
+func (ec *executionContext) unmarshalODateTime2ᚖtimeᚐTime(ctx context.Context, v any) (*time.Time, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalTime(v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalOString2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
+func (ec *executionContext) marshalODateTime2ᚖtimeᚐTime(ctx context.Context, sel ast.SelectionSet, v *time.Time) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
 	_ = sel
 	_ = ctx
-	res := graphql.MarshalString(v)
+	res := graphql.MarshalTime(*v)
 	return res
 }
 
@@ -3381,19 +3926,12 @@ func (ec *executionContext) marshalOString2ᚖstring(ctx context.Context, sel as
 	return res
 }
 
-func (ec *executionContext) marshalOSubscription2ᚖgithubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋbillingᚋdomainᚋentityᚐSubscription(ctx context.Context, sel ast.SelectionSet, v *entity1.Subscription) graphql.Marshaler {
+func (ec *executionContext) marshalOSubscription2ᚖgithubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋbffᚋportsᚋgraphqlᚋmodelᚐSubscription(ctx context.Context, sel ast.SelectionSet, v *model.Subscription) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
 	res := ec._Subscription(ctx, sel)
 	return res(ctx)
-}
-
-func (ec *executionContext) marshalOUser2ᚖgithubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋprofileᚋdomainᚋentityᚐProfile(ctx context.Context, sel ast.SelectionSet, v *entity.Profile) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._User(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalO__EnumValue2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐEnumValueᚄ(ctx context.Context, sel ast.SelectionSet, v []introspection.EnumValue) graphql.Marshaler {

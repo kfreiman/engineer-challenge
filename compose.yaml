@@ -5,6 +5,7 @@ services:
     container_name: orbitto_traefik
     command:
       - "--api.insecure=true"
+      - "--accesslog=${ORBITTO_TRAEFIK_ACCESSLOG:-false}"
       - "--providers.docker=false"
       - "--providers.file.directory=/etc/traefik/config"
       - "--providers.file.watch=true"
@@ -122,7 +123,9 @@ services:
       dockerfile: infra/docker/core/Dockerfile
     container_name: orbitto_core
     environment:
-      PORT: 8080
+      HTTP_PORT: 8080
+      HTTP_BFF_PORT: 8081
+      LOG_LEVEL: ${ORBITTO_CORE_LOG_LEVEL:-info}
       DB_DSN: postgres://${ORBITTO_KRATOS_DB_USER:?}:${ORBITTO_KRATOS_DB_PASSWORD:?}@orbitto_kratos_db:5432/${ORBITTO_KRATOS_DB_NAME:?}?sslmode=disable
     networks:
       - orbitto_net

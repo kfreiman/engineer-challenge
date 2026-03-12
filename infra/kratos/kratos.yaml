@@ -42,17 +42,16 @@ selfservice:
       after:
         password:
           hooks:
-            - hook: session
-            - hook: web_hook
-              config:
-                method: "POST"
-                # function(ctx) { identity_id: ctx.identity.id, email: ctx.identity.traits.email }
-                body: base64://ZnVuY3Rpb24oY3R4KSB7IGlkZW50aXR5X2lkOiBjdHguaWRlbnRpdHkuaWQsIGVtYWlsOiBjdHguaWRlbnRpdHkudHJhaXRzLmVtYWlsIH0=
-                url: http://orbitto_core/profile/v1/webhook/kratos # TODO make configurable
-                response:
-                  ignore: false # Defines if the webhook response should be ignored and run async. Boolean. OPTIONAL
-                  parse: false
-
+          - hook: web_hook
+            config:
+              method: "POST"
+              # function(ctx) { identity_id: ctx.identity.id, email: ctx.identity.traits.email }
+              body: base64://ZnVuY3Rpb24oY3R4KSB7IGlkZW50aXR5X2lkOiBjdHguaWRlbnRpdHkuaWQsIGVtYWlsOiBjdHguaWRlbnRpdHkudHJhaXRzLmVtYWlsIH0=
+              url: http://orbitto_core:8080/profile/v1/webhook/kratos # TODO make configurable?
+              response:
+                ignore: false # Defines if the webhook response should be ignored and run async. Boolean. OPTIONAL
+                parse: false
+          - hook: session
     settings:
       privileged_session_max_age: 1h
     

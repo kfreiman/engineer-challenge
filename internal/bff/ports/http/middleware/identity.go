@@ -13,15 +13,15 @@ const (
 	IdentityIDHeader = "X-Kratos-Authenticated-Identity-Id"
 )
 
-// IdentityMiddleware extracts the Kratos identity ID from the request header 
+// IdentityMiddleware extracts the Kratos identity ID from the request header
 // and injects it into the request context.
 func IdentityMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		identityID := r.Header.Get(IdentityIDHeader)
 		if identityID == "" {
-			// In a real application, you might want to return 401 Unauthorized 
-			// if the identity is missing, but here we just pass it along 
-			// as it might be an optional authentication route or 
+			// In a real application, you might want to return 401 Unauthorized
+			// if the identity is missing, but here we just pass it along
+			// as it might be an optional authentication route or
 			// the validation is done downstream.
 			next.ServeHTTP(w, r)
 			return

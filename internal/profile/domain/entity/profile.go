@@ -10,11 +10,11 @@ var (
 )
 
 type Profile struct {
-	identityID string
-	email      string
-	fullName   string
-	createdAt  time.Time
-	updatedAt  time.Time
+	id        string
+	email     string
+	fullName  string
+	createdAt time.Time
+	updatedAt time.Time
 }
 
 func NewProfile(identityID, email string) (*Profile, error) {
@@ -22,15 +22,20 @@ func NewProfile(identityID, email string) (*Profile, error) {
 		return nil, ErrInvalidIdentityID
 	}
 	return &Profile{
-		identityID: identityID,
-		email:      email,
-		createdAt:  time.Now(),
-		updatedAt:  time.Now(),
+		id:        identityID,
+		email:     email,
+		createdAt: time.Now(),
+		updatedAt: time.Now(),
 	}, nil
 }
 
-func (p *Profile) IdentityID() string {
-	return p.identityID
+func (p *Profile) ID() string {
+	return p.id
+}
+
+// GetID is a compatibility method for the Node interface.
+func (p *Profile) GetID() string {
+	return p.ID()
 }
 
 func (p *Profile) Email() string {

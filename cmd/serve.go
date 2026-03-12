@@ -21,9 +21,8 @@ import (
 )
 
 type httpConfig struct {
-	Port           int `env:"PORT" env-default:"80" env-description:"HTTP port" json:"port"`
-	BFFPort        int `env:"BFF_PORT" env-default:"8081" env-description:"BFF HTTP port" json:"bff_port"`
-	PlaygroundPort int `env:"PLAYGROUND_PORT" env-default:"8082" env-description:"Playground HTTP port" json:"playground_port"`
+	Port    int `env:"PORT" env-default:"80" env-description:"HTTP port" json:"port"`
+	BFFPort int `env:"BFF_PORT" env-default:"8081" env-description:"BFF HTTP port" json:"bff_port"`
 }
 
 type serveConfig struct {
@@ -54,7 +53,9 @@ var serveCmd = &cobra.Command{
 
 		profileApp := profileservice.NewApplication(logger)
 		profileMux := profilehttp.NewRouter(profileApp, billingService)
-		bffMux := bffhttp.NewRouter()
+
+		bffMux, bffResolver := bffhttp.NewRouter(logger)
+		bffResolver.ProfileApp = profileApp
 
 		g, ctx := errgroup.WithContext(ctx)
 

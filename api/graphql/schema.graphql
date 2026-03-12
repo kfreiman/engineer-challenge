@@ -1,33 +1,166 @@
-type Query {
-  me: User!
-  user(id: ID!): User
+"""
+A scale representing a date and time in ISO 8601 format.
+"""
+scalar DateTime
+
+"""
+An object with a globally unique ID.
+"""
+interface Node {
+  """
+  The ID of the object.
+  """
+  id: ID!
 }
+
+"""
+Standard error interface.
+"""
+interface Error {
+  """
+  A human-readable error message.
+  """
+  message: String!
+}
+
+"""
+Returned when a user attempts an action they don't have permission for.
+"""
+type UnauthorizedError implements Error {
+  message: String!
+  """
+  The permission that was required but missing.
+  """
+  requiredPermission: String
+}
+
+"""
+Returned when the user is not authenticated.
+"""
+type UnauthenticatedError implements Error {
+  message: String!
+}
+
+"""
+Returned when input validation fails.
+"""
+type ValidationError implements Error {
+  message: String!
+  """
+  The field that caused the validation error.
+  """
+  field: String
+}
+
+"""
+Directive to mark a field as requiring authentication.
+"""
+directive @auth on FIELD_DEFINITION
+
+type Query {
+  """
+  The currently authenticated user.
+  """
+  me: MeResult! @auth
+}
+
+"""
+The result of the 'me' query.
+"""
+union MeResult = User | UnauthenticatedError
 
 type Mutation {
-  updateProfile(fullName: String!): User!
+  """
+  Updates the profile of the currently authenticated user.
+  """
+  updateProfile(input: UpdateProfileInput!): UpdateProfileResult! @auth
 }
 
-type User {
+"""
+Input for updating a user profile.
+"""
+input UpdateProfileInput {
+  """
+  The new full name of the user.
+  """
+  fullName: String!
+}
+
+"""
+The result of the 'updateProfile' mutation.
+"""
+union UpdateProfileResult = UpdateProfileSuccess | ValidationError | UnauthorizedError | UnauthenticatedError
+
+"""
+Returned when the profile update is successful.
+"""
+type UpdateProfileSuccess {
+  """
+  The updated user object.
+  """
+  user: User!
+}
+
+"""
+A user account in the system.
+"""
+type User implements Node {
   id: ID!
+  """
+  The user's email address.
+  """
   email: String!
+  """
+  The user's full name.
+  """
   fullName: String
+  """
+  The user's current subscription details.
+  """
   subscription: Subscription
-  createdAt: String!
-  updatedAt: String!
+  """
+  When the user account was created.
+  """
+  createdAt: DateTime!
+  """
+  When the user account was last updated.
+  """
+  updatedAt: DateTime!
 }
 
+"""
+Information about a user's subscription.
+"""
 type Subscription {
+  """
+  The subscription tier.
+  """
   plan: SubscriptionPlan!
+  """
+  The current status of the subscription.
+  """
   status: SubscriptionStatus!
-  expiresAt: String
-  createdAt: String!
+  """
+  When the subscription is set to expire.
+  """
+  expiresAt: DateTime
+  """
+  When the subscription was created.
+  """
+  createdAt: DateTime!
 }
 
+"""
+Available subscription tiers.
+"""
 enum SubscriptionPlan {
   FREE
   PRO
 }
 
+"""
+Current status of a subscription.
+"""
 enum SubscriptionStatus {
   ACTIVE
   INACTIVE

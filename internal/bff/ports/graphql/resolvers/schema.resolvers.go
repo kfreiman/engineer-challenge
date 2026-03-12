@@ -8,60 +8,59 @@ package resolvers
 import (
 	"context"
 	"fmt"
+	"time"
 
 	graphql1 "github.com/kfreiman/engineer-challenge/internal/bff/ports/graphql"
-	entity1 "github.com/kfreiman/engineer-challenge/internal/billing/domain/entity"
-	"github.com/kfreiman/engineer-challenge/internal/profile/domain/entity"
+	"github.com/kfreiman/engineer-challenge/internal/bff/ports/graphql/model"
+	"github.com/kfreiman/engineer-challenge/internal/bff/ports/http/middleware"
+	"github.com/kfreiman/engineer-challenge/internal/profile/app/query"
 )
 
 // UpdateProfile is the resolver for the updateProfile field.
-func (r *mutationResolver) UpdateProfile(ctx context.Context, fullName string) (*entity.Profile, error) {
+func (r *mutationResolver) UpdateProfile(ctx context.Context, input model.UpdateProfileInput) (model.UpdateProfileResult, error) {
 	panic(fmt.Errorf("not implemented: UpdateProfile - updateProfile"))
 }
 
 // Me is the resolver for the me field.
-func (r *queryResolver) Me(ctx context.Context) (*entity.Profile, error) {
-	panic(fmt.Errorf("not implemented: Me - me"))
-}
+func (r *queryResolver) Me(ctx context.Context) (model.MeResult, error) {
+	identityID := middleware.GetIdentityID(ctx)
+	if identityID == "" {
+		r.Logger.WarnContext(ctx, "unauthenticated request to Me")
+		return model.UnauthenticatedError{
+			Message: "Unauthorized",
+		}, nil
+	}
 
-// User is the resolver for the user field.
-func (r *queryResolver) User(ctx context.Context, id string) (*entity.Profile, error) {
-	panic(fmt.Errorf("not implemented: User - user"))
+	r.Logger.DebugContext(ctx, "getting profile", "identity_id", identityID)
+	ent, err := r.ProfileApp.Queries.GetProfile.Handle(ctx, query.GetProfile{
+		IdentityID: identityID,
+	})
+	if err != nil {
+		r.Logger.ErrorContext(ctx, "failed to get profile", "identity_id", identityID, "error", err)
+		return nil, err
+	}
+
+	return mapProfileToUserDTO(ent), nil
 }
 
 // Plan is the resolver for the plan field.
-func (r *subscriptionResolver) Plan(ctx context.Context) (<-chan entity1.Plan, error) {
+func (r *subscriptionResolver) Plan(ctx context.Context) (<-chan model.SubscriptionPlan, error) {
 	panic(fmt.Errorf("not implemented: Plan - plan"))
 }
 
 // Status is the resolver for the status field.
-func (r *subscriptionResolver) Status(ctx context.Context) (<-chan entity1.Status, error) {
+func (r *subscriptionResolver) Status(ctx context.Context) (<-chan model.SubscriptionStatus, error) {
 	panic(fmt.Errorf("not implemented: Status - status"))
 }
 
 // ExpiresAt is the resolver for the expiresAt field.
-func (r *subscriptionResolver) ExpiresAt(ctx context.Context) (<-chan *string, error) {
+func (r *subscriptionResolver) ExpiresAt(ctx context.Context) (<-chan *time.Time, error) {
 	panic(fmt.Errorf("not implemented: ExpiresAt - expiresAt"))
 }
 
 // CreatedAt is the resolver for the createdAt field.
-func (r *subscriptionResolver) CreatedAt(ctx context.Context) (<-chan string, error) {
+func (r *subscriptionResolver) CreatedAt(ctx context.Context) (<-chan *time.Time, error) {
 	panic(fmt.Errorf("not implemented: CreatedAt - createdAt"))
-}
-
-// ID is the resolver for the id field.
-func (r *userResolver) ID(ctx context.Context, obj *entity.Profile) (string, error) {
-	panic(fmt.Errorf("not implemented: ID - id"))
-}
-
-// CreatedAt is the resolver for the createdAt field.
-func (r *userResolver) CreatedAt(ctx context.Context, obj *entity.Profile) (string, error) {
-	panic(fmt.Errorf("not implemented: CreatedAt - createdAt"))
-}
-
-// UpdatedAt is the resolver for the updatedAt field.
-func (r *userResolver) UpdatedAt(ctx context.Context, obj *entity.Profile) (string, error) {
-	panic(fmt.Errorf("not implemented: UpdatedAt - updatedAt"))
 }
 
 // Mutation returns graphql1.MutationResolver implementation.
@@ -73,10 +72,6 @@ func (r *Resolver) Query() graphql1.QueryResolver { return &queryResolver{r} }
 // Subscription returns graphql1.SubscriptionResolver implementation.
 func (r *Resolver) Subscription() graphql1.SubscriptionResolver { return &subscriptionResolver{r} }
 
-// User returns graphql1.UserResolver implementation.
-func (r *Resolver) User() graphql1.UserResolver { return &userResolver{r} }
-
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type subscriptionResolver struct{ *Resolver }
-type userResolver struct{ *Resolver }

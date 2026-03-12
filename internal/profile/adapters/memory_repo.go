@@ -23,7 +23,7 @@ func (r *InMemoryProfileRepository) Save(ctx context.Context, profile *entity.Pr
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
-	r.profiles[profile.IdentityID()] = profile
+	r.profiles[profile.ID()] = profile
 	return nil
 }
 

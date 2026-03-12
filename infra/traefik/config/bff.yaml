@@ -8,13 +8,18 @@ http:
         - web
       priority: 2
       middlewares:
+        - strip-prefix
         - kratos-auth
   services:
     bff:
       loadBalancer:
         servers:
-          - url: http://orbitto_core:8080
+          - url: http://orbitto_core:8081
   middlewares:
+    strip-prefix:
+      stripPrefix:
+        prefixes:
+          - /bff
     kratos-auth:
       forwardAuth:
         address: http://orbitto_kratos:4433/sessions/whoami

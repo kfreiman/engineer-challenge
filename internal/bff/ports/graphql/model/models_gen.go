@@ -2,8 +2,234 @@
 
 package model
 
+import (
+	"bytes"
+	"fmt"
+	"io"
+	"strconv"
+	"time"
+)
+
+// Standard error interface.
+type Error interface {
+	IsError()
+	// A human-readable error message.
+	GetMessage() string
+}
+
+// The result of the 'me' query.
+type MeResult interface {
+	IsMeResult()
+}
+
+// An object with a globally unique ID.
+type Node interface {
+	IsNode()
+	// The ID of the object.
+	GetID() string
+}
+
+// The result of the 'updateProfile' mutation.
+type UpdateProfileResult interface {
+	IsUpdateProfileResult()
+}
+
 type Mutation struct {
 }
 
 type Query struct {
+}
+
+// Information about a user's subscription.
+type Subscription struct {
+}
+
+// Returned when the user is not authenticated.
+type UnauthenticatedError struct {
+	Message string `json:"message"`
+}
+
+func (UnauthenticatedError) IsError() {}
+
+// A human-readable error message.
+func (this UnauthenticatedError) GetMessage() string { return this.Message }
+
+func (UnauthenticatedError) IsMeResult() {}
+
+func (UnauthenticatedError) IsUpdateProfileResult() {}
+
+// Returned when a user attempts an action they don't have permission for.
+type UnauthorizedError struct {
+	Message string `json:"message"`
+	// The permission that was required but missing.
+	RequiredPermission *string `json:"requiredPermission,omitempty"`
+}
+
+func (UnauthorizedError) IsError() {}
+
+// A human-readable error message.
+func (this UnauthorizedError) GetMessage() string { return this.Message }
+
+func (UnauthorizedError) IsUpdateProfileResult() {}
+
+// Input for updating a user profile.
+type UpdateProfileInput struct {
+	// The new full name of the user.
+	FullName string `json:"fullName"`
+}
+
+// Returned when the profile update is successful.
+type UpdateProfileSuccess struct {
+	// The updated user object.
+	User *User `json:"user"`
+}
+
+func (UpdateProfileSuccess) IsUpdateProfileResult() {}
+
+// A user account in the system.
+type User struct {
+	ID string `json:"id"`
+	// The user's email address.
+	Email string `json:"email"`
+	// The user's full name.
+	FullName *string `json:"fullName,omitempty"`
+	// The user's current subscription details.
+	Subscription *Subscription `json:"subscription,omitempty"`
+	// When the user account was created.
+	CreatedAt time.Time `json:"createdAt"`
+	// When the user account was last updated.
+	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+func (User) IsMeResult() {}
+
+func (User) IsNode() {}
+
+// The ID of the object.
+func (this User) GetID() string { return this.ID }
+
+// Returned when input validation fails.
+type ValidationError struct {
+	Message string `json:"message"`
+	// The field that caused the validation error.
+	Field *string `json:"field,omitempty"`
+}
+
+func (ValidationError) IsError() {}
+
+// A human-readable error message.
+func (this ValidationError) GetMessage() string { return this.Message }
+
+func (ValidationError) IsUpdateProfileResult() {}
+
+// Available subscription tiers.
+type SubscriptionPlan string
+
+const (
+	SubscriptionPlanFree SubscriptionPlan = "FREE"
+	SubscriptionPlanPro  SubscriptionPlan = "PRO"
+)
+
+var AllSubscriptionPlan = []SubscriptionPlan{
+	SubscriptionPlanFree,
+	SubscriptionPlanPro,
+}
+
+func (e SubscriptionPlan) IsValid() bool {
+	switch e {
+	case SubscriptionPlanFree, SubscriptionPlanPro:
+		return true
+	}
+	return false
+}
+
+func (e SubscriptionPlan) String() string {
+	return string(e)
+}
+
+func (e *SubscriptionPlan) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = SubscriptionPlan(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid SubscriptionPlan", str)
+	}
+	return nil
+}
+
+func (e SubscriptionPlan) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *SubscriptionPlan) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e SubscriptionPlan) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+// Current status of a subscription.
+type SubscriptionStatus string
+
+const (
+	SubscriptionStatusActive   SubscriptionStatus = "ACTIVE"
+	SubscriptionStatusInactive SubscriptionStatus = "INACTIVE"
+)
+
+var AllSubscriptionStatus = []SubscriptionStatus{
+	SubscriptionStatusActive,
+	SubscriptionStatusInactive,
+}
+
+func (e SubscriptionStatus) IsValid() bool {
+	switch e {
+	case SubscriptionStatusActive, SubscriptionStatusInactive:
+		return true
+	}
+	return false
+}
+
+func (e SubscriptionStatus) String() string {
+	return string(e)
+}
+
+func (e *SubscriptionStatus) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = SubscriptionStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid SubscriptionStatus", str)
+	}
+	return nil
+}
+
+func (e SubscriptionStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *SubscriptionStatus) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e SubscriptionStatus) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
 }
