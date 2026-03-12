@@ -130,6 +130,7 @@ The application uses the following services with the specified ports:
 ### Environment Variable Precedence
 
 Variables are resolved in the following order:
+
 1. `.env` file (if present)
 2. Shell environment variables
 3. Default values (for development variables)

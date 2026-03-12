@@ -6,8 +6,10 @@ import (
 	"os"
 
 	"github.com/ilyakaznacheev/cleanenv"
+	billingservice "github.com/kfreiman/engineer-challenge/internal/billing/service"
+	billinglocal "github.com/kfreiman/engineer-challenge/internal/billing/ports/local"
 	profilehttp "github.com/kfreiman/engineer-challenge/internal/profile/ports/http"
-	"github.com/kfreiman/engineer-challenge/internal/profile/service"
+	profileservice "github.com/kfreiman/engineer-challenge/internal/profile/service"
 
 	"github.com/spf13/cobra"
 )
@@ -38,8 +40,11 @@ var serveCmd = &cobra.Command{
 		// create logger
 		logger := createLogger(conf.Logger)
 
-		app := service.NewApplication(logger)
-		mux := profilehttp.NewRouter(app)
+		billingApp := billingservice.NewApplication(logger)
+		billingService := billinglocal.NewBillingService(billingApp)
+
+		profileApp := profileservice.NewApplication(logger)
+		mux := profilehttp.NewRouter(profileApp, billingService)
 
 		addr := fmt.Sprintf(":%d", conf.HTTP.Port)
 		logger.InfoContext(ctx, "HTTP server starting",

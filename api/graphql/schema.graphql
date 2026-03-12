@@ -1,0 +1,34 @@
+type Query {
+  me: User!
+  user(id: ID!): User
+}
+
+type Mutation {
+  updateProfile(fullName: String!): User!
+}
+
+type User {
+  id: ID!
+  email: String!
+  fullName: String
+  subscription: Subscription
+  createdAt: String!
+  updatedAt: String!
+}
+
+type Subscription {
+  plan: SubscriptionPlan!
+  status: SubscriptionStatus!
+  expiresAt: String
+  createdAt: String!
+}
+
+enum SubscriptionPlan {
+  FREE
+  PRO
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  INACTIVE
+}
