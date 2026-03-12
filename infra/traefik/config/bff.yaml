@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/traefik/traefik/v3.0/docs/content/reference/dynamic-configuration/file.json
+# yaml-language-server: $schema=https://www.schemastore.org/traefik-v3-file-provider.json
 http:
   routers:
     bff:
@@ -7,8 +7,17 @@ http:
       entryPoints:
         - web
       priority: 2
+      middlewares:
+        - kratos-auth
   services:
     bff:
       loadBalancer:
         servers:
           - url: http://orbitto_core:8080
+  middlewares:
+    kratos-auth:
+      forwardAuth:
+        address: http://orbitto_kratos:4433/sessions/whoami
+        trustForwardHeader: true
+        authResponseHeaders:
+          - x-kratos-authenticated-identity-id
