@@ -2,8 +2,8 @@ package command
 
 import (
 	"context"
-	"log/slog"
 
+	"github.com/kfreiman/engineer-challenge/internal/logger"
 	"github.com/kfreiman/engineer-challenge/internal/profile/domain"
 	"github.com/kfreiman/engineer-challenge/internal/profile/domain/entity"
 )
@@ -15,15 +15,15 @@ type UpdateProfile struct {
 
 type UpdateProfileHandler struct {
 	repo   domain.ProfileRepository
-	logger *slog.Logger
+	logger logger.Logger
 }
 
-func NewUpdateProfileHandler(repo domain.ProfileRepository, logger *slog.Logger) UpdateProfileHandler {
+func NewUpdateProfileHandler(repo domain.ProfileRepository, logger logger.Logger) UpdateProfileHandler {
 	return UpdateProfileHandler{repo: repo, logger: logger}
 }
 
 func (h UpdateProfileHandler) Handle(ctx context.Context, cmd UpdateProfile) error {
-	h.logger.Info("Updating profile", "identityID", cmd.IdentityID, "fullName", cmd.FullName)
+	h.logger.InfoContext(ctx, "Updating profile", "identityID", cmd.IdentityID, "fullName", cmd.FullName)
 
 	err := h.repo.Update(ctx, cmd.IdentityID, func(p *entity.Profile) (*entity.Profile, error) {
 		p.UpdateFullName(cmd.FullName)
@@ -31,7 +31,7 @@ func (h UpdateProfileHandler) Handle(ctx context.Context, cmd UpdateProfile) err
 	})
 
 	if err != nil {
-		h.logger.Error("Failed to update profile", "error", err, "identityID", cmd.IdentityID)
+		h.logger.ErrorContext(ctx, "Failed to update profile", "error", err, "identityID", cmd.IdentityID)
 		return err
 	}
 

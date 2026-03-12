@@ -2,8 +2,8 @@ package command
 
 import (
 	"context"
-	"log/slog"
 
+	"github.com/kfreiman/engineer-challenge/internal/logger"
 	"github.com/kfreiman/engineer-challenge/internal/profile/domain"
 	"github.com/kfreiman/engineer-challenge/internal/profile/domain/entity"
 )
@@ -15,24 +15,24 @@ type InitializeProfile struct {
 
 type InitializeProfileHandler struct {
 	repo   domain.ProfileRepository
-	logger *slog.Logger
+	logger logger.Logger
 }
 
-func NewInitializeProfileHandler(repo domain.ProfileRepository, logger *slog.Logger) InitializeProfileHandler {
+func NewInitializeProfileHandler(repo domain.ProfileRepository, logger logger.Logger) InitializeProfileHandler {
 	return InitializeProfileHandler{repo: repo, logger: logger}
 }
 
 func (h InitializeProfileHandler) Handle(ctx context.Context, cmd InitializeProfile) error {
-	h.logger.Info("Initializing profile", "identityID", cmd.IdentityID, "email", cmd.Email)
+	h.logger.InfoContext(ctx, "Initializing profile", "identityID", cmd.IdentityID, "email", cmd.Email)
 
 	p, err := entity.NewProfile(cmd.IdentityID, cmd.Email)
 	if err != nil {
-		h.logger.Error("Failed to create profile", "error", err, "identityID", cmd.IdentityID)
+		h.logger.ErrorContext(ctx, "Failed to create profile", "error", err, "identityID", cmd.IdentityID)
 		return err
 	}
 
 	if err := h.repo.Save(ctx, p); err != nil {
-		h.logger.Error("Failed to save profile", "error", err, "identityID", cmd.IdentityID)
+		h.logger.ErrorContext(ctx, "Failed to save profile", "error", err, "identityID", cmd.IdentityID)
 		return err
 	}
 

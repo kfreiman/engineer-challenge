@@ -6,8 +6,8 @@ import (
 	"os"
 
 	"github.com/ilyakaznacheev/cleanenv"
-	billingservice "github.com/kfreiman/engineer-challenge/internal/billing/service"
 	billinglocal "github.com/kfreiman/engineer-challenge/internal/billing/ports/local"
+	billingservice "github.com/kfreiman/engineer-challenge/internal/billing/service"
 	profilehttp "github.com/kfreiman/engineer-challenge/internal/profile/ports/http"
 	profileservice "github.com/kfreiman/engineer-challenge/internal/profile/service"
 
@@ -52,7 +52,7 @@ var serveCmd = &cobra.Command{
 		)
 
 		if err := http.ListenAndServe(addr, mux); err != nil {
-			logger.Error("Error starting server", "error", err)
+			logger.ErrorContext(ctx, "Error starting server", "error", err)
 			return err
 		}
 
