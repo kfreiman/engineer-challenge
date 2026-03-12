@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.4.0](https://github.com/kfreiman/engineer-challenge/compare/v0.3.0...v0.4.0) (2026-03-12)
+
+
+### Features
+
+* **bff:** add GraphQL server with identity middleware and multi-server support ([a882c13](https://github.com/kfreiman/engineer-challenge/commit/a882c133f8a96350b0b3670e1ce4405538c2f129))
+* **graphql:** add GraphQL support to BFF and web client ([d8f7bd0](https://github.com/kfreiman/engineer-challenge/commit/d8f7bd0540d4fbd02cad89a76110f482153a61d4))
+* **graphql:** implement secure schema with authentication and profile management ([0529fbf](https://github.com/kfreiman/engineer-challenge/commit/0529fbf6cb507c7f6db714b57f82cbd94af815a3))
+* **profile:** integrate billing service for subscription management ([01040b0](https://github.com/kfreiman/engineer-challenge/commit/01040b06dae543c5d172823a6a1cdf6c69a9e351))
+
 ## [0.3.0](https://github.com/kfreiman/engineer-challenge/compare/v0.2.0...v0.3.0) (2026-03-12)
 
 
