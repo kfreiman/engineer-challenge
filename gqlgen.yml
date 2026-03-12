@@ -1,0 +1,38 @@
+schema:
+  - api/graphql/*.graphql
+
+exec:
+  package: graphql
+  layout: single-file
+  filename: internal/bff/ports/graphql/generated.go
+
+model:
+  filename: internal/bff/ports/graphql/model/models_gen.go
+  package: model
+
+resolver:
+  package: resolvers
+  layout: follow-schema
+  dir: internal/bff/ports/graphql/resolvers
+  filename_template: "{name}.resolvers.go"
+
+autobind:
+  - "github.com/kfreiman/engineer-challenge/internal/profile/domain/entity"
+  - "github.com/kfreiman/engineer-challenge/internal/billing/domain/entity"
+
+models:
+  ID:
+    model:
+      - github.com/99designs/gqlgen/graphql.ID
+  User:
+    model:
+      - github.com/kfreiman/engineer-challenge/internal/profile/domain/entity.Profile
+  Subscription:
+    model:
+      - github.com/kfreiman/engineer-challenge/internal/billing/domain/entity.Subscription
+  SubscriptionPlan:
+    model:
+      - github.com/kfreiman/engineer-challenge/internal/billing/domain/entity.Plan
+  SubscriptionStatus:
+    model:
+      - github.com/kfreiman/engineer-challenge/internal/billing/domain/entity.Status

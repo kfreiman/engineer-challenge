@@ -1,6 +1,5 @@
 import { useLogout } from "#/hooks/use-logout";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
 import {
 	Item,
 	ItemActions,
@@ -42,16 +41,7 @@ function RouteComponent() {
 						<ItemTitle>{user.name}</ItemTitle>
 						<ItemDescription>{user.email}</ItemDescription>
 					</ItemContent>
-					{/* <ItemActions>
-						<Button
-							size="icon-sm"
-							variant="outline"
-							className="rounded-full"
-							aria-label="Invite"
-						>
-							<Plus />
-						</Button>
-					</ItemActions> */}
+
 				</Item>
 				<Item variant="outline" size="sm" asChild>
 					<a href={logout?.logout_url || "/"} data-testid="orbitto/auth/logout_link">
@@ -72,52 +62,3 @@ function RouteComponent() {
 
 	);
 }
-
-// <div className="flex justify-center items-start pt-8">
-// 	<Card className="w-full max-w-md">
-// 		<CardHeader>
-// 			<div className="flex items-center gap-4">
-// 				<Avatar className="h-16 w-16">
-// 					<AvatarImage src={user.avatar} alt={user.name} />
-// 					<AvatarFallback className="text-lg">{user.name.charAt(0).toUpperCase()}</AvatarFallback>
-// 				</Avatar>
-// 				<div>
-// 					<CardTitle className="text-xl">{user.name}</CardTitle>
-// 					<CardDescription>Profile Settings</CardDescription>
-// 				</div>
-// 			</div>
-// 		</CardHeader>
-// 		<Separator />
-// 		<CardContent className="pt-6 space-y-6">
-// 			<div className="space-y-4">
-// 				<h3 className="text-sm font-medium text-muted-foreground">Personal Information</h3>
-// 				<div className="grid gap-4">
-// 					<div className="flex items-center gap-4">
-// 						<div className="flex items-center gap-2 text-muted-foreground w-32">
-// 							<UserIcon size={18} />
-// 							<span className="text-sm">Name</span>
-// 						</div>
-// 						<span className="text-sm">{user.name}</span>
-// 					</div>
-// 					<div className="flex items-center gap-4">
-// 						<div className="flex items-center gap-2 text-muted-foreground w-32">
-// 							<MailIcon size={18} />
-// 							<span className="text-sm">Email</span>
-// 						</div>
-// 						<span className="text-sm">{user.email}</span>
-// 					</div>
-// 				</div>
-// 			</div>
-// 			<Separator />
-// 			<div className="space-y-4">
-// 				<h3 className="text-sm font-medium text-muted-foreground">Account Actions</h3>
-// 				<a href={logout?.logout_url || "/"}>
-// 					<Button variant="destructive" className="w-full">
-// 						<LogOutIcon className="mr-2 h-4 w-4" />
-// 						Log out
-// 					</Button>
-// 				</a>
-// 			</div>
-// 		</CardContent>
-// 	</Card>
-// </div>

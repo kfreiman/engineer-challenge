@@ -1,0 +1,14 @@
+query Me {
+  me {
+    id
+    email
+    fullName
+  }
+}
+
+mutation UpdateProfile($fullName: String!) {
+  updateProfile(fullName: $fullName) {
+    id
+    fullName
+  }
+}
