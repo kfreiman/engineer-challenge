@@ -15,6 +15,10 @@ selfservice:
   methods:
     password:
       enabled: true
+    code: # Enables the "one-time code" method. Use 'link' to enable "magic link" method.
+      enabled: true
+      config:
+        lifespan: 15m # Defines how long the code or link are valid for. Default: 1h.
 
   flows:
     error: {}
@@ -52,8 +56,13 @@ selfservice:
     settings:
       privileged_session_max_age: 1h
     
-    recovery: {}
-    verification: {}
+    recovery: 
+      enabled: true
+      lifespan: 15m # Defines how much time the user has to complete the recovery flow in the UI. Default: 1h.
+      use: code # Defines which method is used, one of 'code' or 'link'.
+    
+    verification:
+      enabled: false
 
 session:
   whoami:
@@ -85,7 +94,3 @@ identity:
   schemas:
     - id: user
       url: file:///etc/config/kratos/user.schema.json
-
-courier:
-  smtp:
-    connection_uri: smtps://test:test@mailslurper:1025/?skip_ssl_verify=true

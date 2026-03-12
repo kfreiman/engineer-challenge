@@ -73,9 +73,13 @@ services:
       SELFSERVICE_FLOWS_LOGIN_UI_URL: ${ORBITTO_SCHEMA}${ORBITTO_HOSTNAME}/auth/login
       SELFSERVICE_FLOWS_REGISTRATION_UI_URL: ${ORBITTO_SCHEMA}${ORBITTO_HOSTNAME}/auth/registration
       SELFSERVICE_FLOWS_SETTINGS_UI_URL: ${ORBITTO_SCHEMA}${ORBITTO_HOSTNAME}/auth/settings
+      SELFSERVICE_FLOWS_VERIFICATION_UI_URL: ${ORBITTO_SCHEMA}${ORBITTO_HOSTNAME}/auth/verify
+      SELFSERVICE_FLOWS_RECOVERY_UI_URL: ${ORBITTO_SCHEMA}${ORBITTO_HOSTNAME}/auth/recovery
       SECRETS_COOKIE_0: ${ORBITTO_KRATOS_COOKIE_SECRET:?}
       SECRETS_CIPHER_0: ${ORBITTO_KRATOS_CIPHER_SECRET:?}
-    command: serve -c /etc/config/kratos/kratos.yaml
+      COURIER_SMTP_CONNECTION_URI: ${ORBITTO_MAIL_SMTP_CONNECTION_URI:-smtp://orbitto_mailpit:1025?disable_starttls=true}
+      COURIER_SMTP_FROM_ADDRESS: ${ORBITTO_MAIL_FROM_ADDRESS:-no-reply}@${ORBITTO_HOSTNAME}
+    command: serve -c /etc/config/kratos/kratos.yaml --watch-courier
     volumes:
       - ./infra/kratos:/etc/config/kratos
     networks:
@@ -150,10 +154,20 @@ services:
     environment:
       VITE_ALLOWED_HOSTS: ${ORBITTO_HOSTNAME}
       VITE_APP_AUTH_BASEURL: ${ORBITTO_SCHEMA}${ORBITTO_HOSTNAME}
-
     command: pnpm run start # Explicitly set the start command
     networks:
       - orbitto_net
+    restart: unless-stopped
+
+  orbitto_mailpit:
+    container_name: orbitto_mailpit
+    image: axllent/mailpit
+    networks:
+      - orbitto_net
+    environment:
+      MP_MAX_MESSAGES: 100
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
     restart: unless-stopped
 
 volumes:

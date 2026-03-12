@@ -18,7 +18,7 @@ test.describe('Authentication Journey', () => {
 
     // 3. Login
     // Assuming user lands on a generic page where login is required
-    await loginPage.startLoginFromLanding();
+    await loginPage.goto();
     await loginPage.login(email, password);
 
     // 4. Verify login success

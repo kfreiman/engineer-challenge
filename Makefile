@@ -96,6 +96,12 @@ dev_bff: ## Start BFF service in development mode
 dev_web: ## Start web service in development mode
 	docker compose -f compose.yaml -f compose.dev.yaml up -d --force-recreate orbitto_web
 
+dev_mailpit: ## Show logs for all services (development mode)
+	docker compose -f compose.yaml -f compose.dev.yaml up -d --force-recreate orbitto_mailpit
+
+mailpit_logs: ## Show mailpit logs
+	docker compose logs -f orbitto_mailpit
+
 # ============================================
 # Standard Commands
 # ============================================
@@ -145,15 +151,3 @@ release: ## Create version commit and tag (interactively)
 
 release_dry: ## Create version commit and tag (dry-run preview only)
 	npx commit-and-tag-version --dry-run
-
-# ============================================
-# Cleanup
-# ============================================
-
-clean: down ## Clean up generated files and containers
-	rm -rf dist/
-	@echo "Clean completed."
-
-clean_dev: down_dev ## Clean up development containers
-	rm -rf dist/
-	@echo "Clean completed."

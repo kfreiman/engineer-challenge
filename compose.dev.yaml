@@ -18,7 +18,9 @@ services:
     environment:
       DSN: memory # use in-memory database for development
       LOG_LEVEL: ${ORBITTO_KRATOS_LOG_LEVEL:-info}
-    command: serve -c /etc/config/kratos/kratos.yaml --dev
+      # leak sensitive values to log for development
+      LOG_LEAK_SENSITIVE_VALUES: true
+    command: serve -c /etc/config/kratos/kratos.yaml --dev --watch-courier
     depends_on: {}
 
   orbitto_web:
@@ -34,7 +36,7 @@ services:
       - "${ORBITTO_WEB_EXPOSE_PORT:-3000}:3000"
     volumes:
       - ./web:${PWD}/web:cached
-      - node_modules:${PWD}/web/node_modules
+      - orbitto_web_node_modules:${PWD}/web/node_modules
     command: sh -c "pnpm install && pnpm run dev"
     environment:
       NODE_ENV: development
@@ -51,5 +53,9 @@ services:
     volumes:
       - ${PWD}:${PWD}
 
+  orbitto_mailpit:
+    ports:
+      - ${ORBITTO_MAILPIT_EXPOSE_PORT:-8025}:8025
+
 volumes:
-  node_modules: {}
+  orbitto_web_node_modules: {}

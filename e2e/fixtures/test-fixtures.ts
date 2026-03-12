@@ -2,12 +2,14 @@ import { test as base } from '@playwright/test';
 import { RegistrationPage } from '../pages/RegistrationPage';
 import { LoginPage } from '../pages/LoginPage';
 import { ProfilePage } from '../pages/ProfilePage';
+import { RecoveryPage } from '../pages/RecoveryPage';
 import { HOSTNAME } from '../config';
 
 type PageObjects = {
   registrationPage: RegistrationPage;
   loginPage: LoginPage;
   profilePage: ProfilePage;
+  recoveryPage: RecoveryPage;
 };
 
 export const test = base.extend<PageObjects>({
@@ -19,6 +21,9 @@ export const test = base.extend<PageObjects>({
   },
   profilePage: async ({ page }, use) => {
     await use(new ProfilePage(page));
+  },
+  recoveryPage: async ({ page }, use) => {
+    await use(new RecoveryPage(page));
   },
 });
 
