@@ -1,0 +1,19 @@
+query GetMe {
+  me {
+    ... on User {
+      id
+      email
+      fullName
+      createdAt
+      subscription {
+        plan
+        status
+        expiresAt
+        createdAt
+      }
+    }
+    ... on UnauthenticatedError {
+      message
+    }
+  }
+}

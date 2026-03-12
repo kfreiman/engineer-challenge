@@ -8,7 +8,6 @@ package resolvers
 import (
 	"context"
 	"fmt"
-	"time"
 
 	graphql1 "github.com/kfreiman/engineer-challenge/internal/bff/ports/graphql"
 	"github.com/kfreiman/engineer-challenge/internal/bff/ports/graphql/model"
@@ -40,27 +39,7 @@ func (r *queryResolver) Me(ctx context.Context) (model.MeResult, error) {
 		return nil, err
 	}
 
-	return mapProfileToUserDTO(ent), nil
-}
-
-// Plan is the resolver for the plan field.
-func (r *subscriptionResolver) Plan(ctx context.Context) (<-chan model.SubscriptionPlan, error) {
-	panic(fmt.Errorf("not implemented: Plan - plan"))
-}
-
-// Status is the resolver for the status field.
-func (r *subscriptionResolver) Status(ctx context.Context) (<-chan model.SubscriptionStatus, error) {
-	panic(fmt.Errorf("not implemented: Status - status"))
-}
-
-// ExpiresAt is the resolver for the expiresAt field.
-func (r *subscriptionResolver) ExpiresAt(ctx context.Context) (<-chan *time.Time, error) {
-	panic(fmt.Errorf("not implemented: ExpiresAt - expiresAt"))
-}
-
-// CreatedAt is the resolver for the createdAt field.
-func (r *subscriptionResolver) CreatedAt(ctx context.Context) (<-chan *time.Time, error) {
-	panic(fmt.Errorf("not implemented: CreatedAt - createdAt"))
+	return mapProfileToUserDTO(ctx, ent, r.BillingApp)
 }
 
 // Mutation returns graphql1.MutationResolver implementation.
@@ -69,9 +48,5 @@ func (r *Resolver) Mutation() graphql1.MutationResolver { return &mutationResolv
 // Query returns graphql1.QueryResolver implementation.
 func (r *Resolver) Query() graphql1.QueryResolver { return &queryResolver{r} }
 
-// Subscription returns graphql1.SubscriptionResolver implementation.
-func (r *Resolver) Subscription() graphql1.SubscriptionResolver { return &subscriptionResolver{r} }
-
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
-type subscriptionResolver struct{ *Resolver }

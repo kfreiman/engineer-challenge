@@ -15,7 +15,7 @@
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": true,
+    // "verbatimModuleSyntax": true, // https://github.com/dotansimha/graphql-typed-document-node/issues/131#issuecomment-2744565092
     "noEmit": true,
 
     /* Linting */

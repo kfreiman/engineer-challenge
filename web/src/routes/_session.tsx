@@ -1,9 +1,7 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { oryCli } from "@/lib/auth";
 import { TooltipProvider } from "@/components/ui/tooltip"
-import { Separator } from "#/components/ui/separator";
 import { NavUser } from "#/components/nav-user";
-import { Badge } from "#/components/ui/badge";
 
 export const Route = createFileRoute("/_session")({
 	beforeLoad: async ({ location }) => {
@@ -33,7 +31,7 @@ function RouteComponent() {
 	const user = {
 		name: (session?.identity?.traits as any)?.name?.first || "",
 		email: (session?.identity?.traits as any)?.email || "",
-		avatar: "/avatars/shadcn.jpg", // Default avatar as in AppSidebar
+		avatar: `https://avatar.vercel.sh/${session?.identity.id}.png`, // Default avatar as in AppSidebar
 	};
 
 	return (
@@ -43,7 +41,6 @@ function RouteComponent() {
 					{/* Left side - can add logo or other items here */}
 				</div>
 				<div className="flex items-center gap-4">
-					<Badge>Free-plan</Badge>
 					<NavUser user={user} />
 				</div>
 			</header>

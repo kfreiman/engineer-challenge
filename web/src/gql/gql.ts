@@ -14,10 +14,10 @@ import { TypedDocumentNode as DocumentNode } from '@graphql-typed-document-node/
  * Learn more about it here: https://the-guild.dev/graphql/codegen/plugins/presets/preset-client#reducing-bundle-size
  */
 type Documents = {
-    "query Me {\n  me {\n    id\n    email\n    fullName\n  }\n}\n\nmutation UpdateProfile($fullName: String!) {\n  updateProfile(fullName: $fullName) {\n    id\n    fullName\n  }\n}": typeof types.MeDocument,
+    "query GetMe {\n  me {\n    ... on User {\n      id\n      email\n      fullName\n      createdAt\n      subscription {\n        plan\n        status\n        expiresAt\n        createdAt\n      }\n    }\n    ... on UnauthenticatedError {\n      message\n    }\n  }\n}": typeof types.GetMeDocument,
 };
 const documents: Documents = {
-    "query Me {\n  me {\n    id\n    email\n    fullName\n  }\n}\n\nmutation UpdateProfile($fullName: String!) {\n  updateProfile(fullName: $fullName) {\n    id\n    fullName\n  }\n}": types.MeDocument,
+    "query GetMe {\n  me {\n    ... on User {\n      id\n      email\n      fullName\n      createdAt\n      subscription {\n        plan\n        status\n        expiresAt\n        createdAt\n      }\n    }\n    ... on UnauthenticatedError {\n      message\n    }\n  }\n}": types.GetMeDocument,
 };
 
 /**
@@ -37,7 +37,7 @@ export function graphql(source: string): unknown;
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "query Me {\n  me {\n    id\n    email\n    fullName\n  }\n}\n\nmutation UpdateProfile($fullName: String!) {\n  updateProfile(fullName: $fullName) {\n    id\n    fullName\n  }\n}"): (typeof documents)["query Me {\n  me {\n    id\n    email\n    fullName\n  }\n}\n\nmutation UpdateProfile($fullName: String!) {\n  updateProfile(fullName: $fullName) {\n    id\n    fullName\n  }\n}"];
+export function graphql(source: "query GetMe {\n  me {\n    ... on User {\n      id\n      email\n      fullName\n      createdAt\n      subscription {\n        plan\n        status\n        expiresAt\n        createdAt\n      }\n    }\n    ... on UnauthenticatedError {\n      message\n    }\n  }\n}"): (typeof documents)["query GetMe {\n  me {\n    ... on User {\n      id\n      email\n      fullName\n      createdAt\n      subscription {\n        plan\n        status\n        expiresAt\n        createdAt\n      }\n    }\n    ... on UnauthenticatedError {\n      message\n    }\n  }\n}"];
 
 export function graphql(source: string) {
   return (documents as any)[source] ?? {};

@@ -41,7 +41,15 @@ type Query struct {
 }
 
 // Information about a user's subscription.
-type Subscription struct {
+type SubscriptionInfo struct {
+	// The subscription tier.
+	Plan SubscriptionPlan `json:"plan"`
+	// The current status of the subscription.
+	Status SubscriptionStatus `json:"status"`
+	// When the subscription is set to expire.
+	ExpiresAt *time.Time `json:"expiresAt,omitempty"`
+	// When the subscription was created.
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 // Returned when the user is not authenticated.
@@ -94,7 +102,7 @@ type User struct {
 	// The user's full name.
 	FullName *string `json:"fullName,omitempty"`
 	// The user's current subscription details.
-	Subscription *Subscription `json:"subscription,omitempty"`
+	Subscription *SubscriptionInfo `json:"subscription,omitempty"`
 	// When the user account was created.
 	CreatedAt time.Time `json:"createdAt"`
 	// When the user account was last updated.

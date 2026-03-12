@@ -56,6 +56,7 @@ var serveCmd = &cobra.Command{
 
 		bffMux, bffResolver := bffhttp.NewRouter(logger)
 		bffResolver.ProfileApp = profileApp
+		bffResolver.BillingApp = billingApp
 
 		g, ctx := errgroup.WithContext(ctx)
 

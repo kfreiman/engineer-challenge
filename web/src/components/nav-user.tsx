@@ -34,7 +34,7 @@ export function NavUser({
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="rounded-full">
           <Avatar>
-            <AvatarImage src="https://github.com/shadcn.png" alt={user.name} />
+            <AvatarImage src={user.avatar} alt={user.name} />
             <AvatarFallback className="rounded-lg">User</AvatarFallback>
           </Avatar>
         </Button>
@@ -49,7 +49,7 @@ export function NavUser({
         <DropdownMenuLabel className="p-0 font-normal">
           <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
             <Avatar>
-              <AvatarImage src="https://github.com/shadcn.png" alt={user.name} />
+              <AvatarImage src={user.avatar} alt={user.name} />
               <AvatarFallback className="rounded-lg">User</AvatarFallback>
             </Avatar>
             <div className="grid flex-1 text-left text-sm leading-tight">

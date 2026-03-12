@@ -30,7 +30,6 @@ type Config = graphql.Config[ResolverRoot, DirectiveRoot, ComplexityRoot]
 type ResolverRoot interface {
 	Mutation() MutationResolver
 	Query() QueryResolver
-	Subscription() SubscriptionResolver
 }
 
 type DirectiveRoot struct {
@@ -46,7 +45,7 @@ type ComplexityRoot struct {
 		Me func(childComplexity int) int
 	}
 
-	Subscription struct {
+	SubscriptionInfo struct {
 		CreatedAt func(childComplexity int) int
 		ExpiresAt func(childComplexity int) int
 		Plan      func(childComplexity int) int
@@ -87,12 +86,6 @@ type MutationResolver interface {
 type QueryResolver interface {
 	Me(ctx context.Context) (model.MeResult, error)
 }
-type SubscriptionResolver interface {
-	Plan(ctx context.Context) (<-chan model.SubscriptionPlan, error)
-	Status(ctx context.Context) (<-chan model.SubscriptionStatus, error)
-	ExpiresAt(ctx context.Context) (<-chan *time.Time, error)
-	CreatedAt(ctx context.Context) (<-chan *time.Time, error)
-}
 
 type executableSchema graphql.ExecutableSchemaState[ResolverRoot, DirectiveRoot, ComplexityRoot]
 
@@ -127,30 +120,30 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.Query.Me(childComplexity), true
 
-	case "Subscription.createdAt":
-		if e.ComplexityRoot.Subscription.CreatedAt == nil {
+	case "SubscriptionInfo.createdAt":
+		if e.ComplexityRoot.SubscriptionInfo.CreatedAt == nil {
 			break
 		}
 
-		return e.ComplexityRoot.Subscription.CreatedAt(childComplexity), true
-	case "Subscription.expiresAt":
-		if e.ComplexityRoot.Subscription.ExpiresAt == nil {
+		return e.ComplexityRoot.SubscriptionInfo.CreatedAt(childComplexity), true
+	case "SubscriptionInfo.expiresAt":
+		if e.ComplexityRoot.SubscriptionInfo.ExpiresAt == nil {
 			break
 		}
 
-		return e.ComplexityRoot.Subscription.ExpiresAt(childComplexity), true
-	case "Subscription.plan":
-		if e.ComplexityRoot.Subscription.Plan == nil {
+		return e.ComplexityRoot.SubscriptionInfo.ExpiresAt(childComplexity), true
+	case "SubscriptionInfo.plan":
+		if e.ComplexityRoot.SubscriptionInfo.Plan == nil {
 			break
 		}
 
-		return e.ComplexityRoot.Subscription.Plan(childComplexity), true
-	case "Subscription.status":
-		if e.ComplexityRoot.Subscription.Status == nil {
+		return e.ComplexityRoot.SubscriptionInfo.Plan(childComplexity), true
+	case "SubscriptionInfo.status":
+		if e.ComplexityRoot.SubscriptionInfo.Status == nil {
 			break
 		}
 
-		return e.ComplexityRoot.Subscription.Status(childComplexity), true
+		return e.ComplexityRoot.SubscriptionInfo.Status(childComplexity), true
 
 	case "UnauthenticatedError.message":
 		if e.ComplexityRoot.UnauthenticatedError.Message == nil {
@@ -281,23 +274,6 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 			ctx = graphql.WithUnmarshalerMap(ctx, inputUnmarshalMap)
 			data := ec._Mutation(ctx, opCtx.Operation.SelectionSet)
 			var buf bytes.Buffer
-			data.MarshalGQL(&buf)
-
-			return &graphql.Response{
-				Data: buf.Bytes(),
-			}
-		}
-	case ast.Subscription:
-		next := ec._Subscription(ctx, opCtx.Operation.SelectionSet)
-
-		var buf bytes.Buffer
-		return func(ctx context.Context) *graphql.Response {
-			buf.Reset()
-			data := next(ctx)
-
-			if data == nil {
-				return nil
-			}
 			data.MarshalGQL(&buf)
 
 			return &graphql.Response{
@@ -449,7 +425,7 @@ type User implements Node {
   """
   The user's current subscription details.
   """
-  subscription: Subscription
+  subscription: SubscriptionInfo
   """
   When the user account was created.
   """
@@ -463,7 +439,7 @@ type User implements Node {
 """
 Information about a user's subscription.
 """
-type Subscription {
+type SubscriptionInfo {
   """
   The subscription tier.
   """
@@ -783,14 +759,14 @@ func (ec *executionContext) fieldContext_Query___schema(_ context.Context, field
 	return fc, nil
 }
 
-func (ec *executionContext) _Subscription_plan(ctx context.Context, field graphql.CollectedField) (ret func(ctx context.Context) graphql.Marshaler) {
-	return graphql.ResolveFieldStream(
+func (ec *executionContext) _SubscriptionInfo_plan(ctx context.Context, field graphql.CollectedField, obj *model.SubscriptionInfo) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_Subscription_plan,
+		ec.fieldContext_SubscriptionInfo_plan,
 		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.Subscription().Plan(ctx)
+			return obj.Plan, nil
 		},
 		nil,
 		ec.marshalNSubscriptionPlan2githubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋbffᚋportsᚋgraphqlᚋmodelᚐSubscriptionPlan,
@@ -799,12 +775,12 @@ func (ec *executionContext) _Subscription_plan(ctx context.Context, field graphq
 	)
 }
 
-func (ec *executionContext) fieldContext_Subscription_plan(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_SubscriptionInfo_plan(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "Subscription",
+		Object:     "SubscriptionInfo",
 		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type SubscriptionPlan does not have child fields")
 		},
@@ -812,14 +788,14 @@ func (ec *executionContext) fieldContext_Subscription_plan(_ context.Context, fi
 	return fc, nil
 }
 
-func (ec *executionContext) _Subscription_status(ctx context.Context, field graphql.CollectedField) (ret func(ctx context.Context) graphql.Marshaler) {
-	return graphql.ResolveFieldStream(
+func (ec *executionContext) _SubscriptionInfo_status(ctx context.Context, field graphql.CollectedField, obj *model.SubscriptionInfo) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_Subscription_status,
+		ec.fieldContext_SubscriptionInfo_status,
 		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.Subscription().Status(ctx)
+			return obj.Status, nil
 		},
 		nil,
 		ec.marshalNSubscriptionStatus2githubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋbffᚋportsᚋgraphqlᚋmodelᚐSubscriptionStatus,
@@ -828,12 +804,12 @@ func (ec *executionContext) _Subscription_status(ctx context.Context, field grap
 	)
 }
 
-func (ec *executionContext) fieldContext_Subscription_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_SubscriptionInfo_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "Subscription",
+		Object:     "SubscriptionInfo",
 		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type SubscriptionStatus does not have child fields")
 		},
@@ -841,14 +817,14 @@ func (ec *executionContext) fieldContext_Subscription_status(_ context.Context, 
 	return fc, nil
 }
 
-func (ec *executionContext) _Subscription_expiresAt(ctx context.Context, field graphql.CollectedField) (ret func(ctx context.Context) graphql.Marshaler) {
-	return graphql.ResolveFieldStream(
+func (ec *executionContext) _SubscriptionInfo_expiresAt(ctx context.Context, field graphql.CollectedField, obj *model.SubscriptionInfo) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_Subscription_expiresAt,
+		ec.fieldContext_SubscriptionInfo_expiresAt,
 		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.Subscription().ExpiresAt(ctx)
+			return obj.ExpiresAt, nil
 		},
 		nil,
 		ec.marshalODateTime2ᚖtimeᚐTime,
@@ -857,12 +833,12 @@ func (ec *executionContext) _Subscription_expiresAt(ctx context.Context, field g
 	)
 }
 
-func (ec *executionContext) fieldContext_Subscription_expiresAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_SubscriptionInfo_expiresAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "Subscription",
+		Object:     "SubscriptionInfo",
 		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type DateTime does not have child fields")
 		},
@@ -870,28 +846,28 @@ func (ec *executionContext) fieldContext_Subscription_expiresAt(_ context.Contex
 	return fc, nil
 }
 
-func (ec *executionContext) _Subscription_createdAt(ctx context.Context, field graphql.CollectedField) (ret func(ctx context.Context) graphql.Marshaler) {
-	return graphql.ResolveFieldStream(
+func (ec *executionContext) _SubscriptionInfo_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.SubscriptionInfo) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_Subscription_createdAt,
+		ec.fieldContext_SubscriptionInfo_createdAt,
 		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.Subscription().CreatedAt(ctx)
+			return obj.CreatedAt, nil
 		},
 		nil,
-		ec.marshalNDateTime2ᚖtimeᚐTime,
+		ec.marshalNDateTime2timeᚐTime,
 		true,
 		true,
 	)
 }
 
-func (ec *executionContext) fieldContext_Subscription_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_SubscriptionInfo_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "Subscription",
+		Object:     "SubscriptionInfo",
 		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type DateTime does not have child fields")
 		},
@@ -1117,20 +1093,19 @@ func (ec *executionContext) fieldContext_User_fullName(_ context.Context, field 
 }
 
 func (ec *executionContext) _User_subscription(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_User_subscription(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	res := &model.Subscription{}
-	fc.Result = res
-	return ec.marshalOSubscription2ᚖgithubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋbffᚋportsᚋgraphqlᚋmodelᚐSubscription(ctx, field.Selections, res)
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_User_subscription,
+		func(ctx context.Context) (any, error) {
+			return obj.Subscription, nil
+		},
+		nil,
+		ec.marshalOSubscriptionInfo2ᚖgithubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋbffᚋportsᚋgraphqlᚋmodelᚐSubscriptionInfo,
+		true,
+		false,
+	)
 }
 
 func (ec *executionContext) fieldContext_User_subscription(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1142,15 +1117,15 @@ func (ec *executionContext) fieldContext_User_subscription(_ context.Context, fi
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "plan":
-				return ec.fieldContext_Subscription_plan(ctx, field)
+				return ec.fieldContext_SubscriptionInfo_plan(ctx, field)
 			case "status":
-				return ec.fieldContext_Subscription_status(ctx, field)
+				return ec.fieldContext_SubscriptionInfo_status(ctx, field)
 			case "expiresAt":
-				return ec.fieldContext_Subscription_expiresAt(ctx, field)
+				return ec.fieldContext_SubscriptionInfo_expiresAt(ctx, field)
 			case "createdAt":
-				return ec.fieldContext_Subscription_createdAt(ctx, field)
+				return ec.fieldContext_SubscriptionInfo_createdAt(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Subscription", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type SubscriptionInfo", field.Name)
 		},
 	}
 	return fc, nil
@@ -2999,30 +2974,55 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 	return out
 }
 
-var subscriptionImplementors = []string{"Subscription"}
+var subscriptionInfoImplementors = []string{"SubscriptionInfo"}
 
-func (ec *executionContext) _Subscription(ctx context.Context, sel ast.SelectionSet) func(ctx context.Context) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, subscriptionImplementors)
-	ctx = graphql.WithFieldContext(ctx, &graphql.FieldContext{
-		Object: "Subscription",
-	})
-	if len(fields) != 1 {
-		graphql.AddErrorf(ctx, "must subscribe to exactly one stream")
-		return nil
+func (ec *executionContext) _SubscriptionInfo(ctx context.Context, sel ast.SelectionSet, obj *model.SubscriptionInfo) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, subscriptionInfoImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SubscriptionInfo")
+		case "plan":
+			out.Values[i] = ec._SubscriptionInfo_plan(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "status":
+			out.Values[i] = ec._SubscriptionInfo_status(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "expiresAt":
+			out.Values[i] = ec._SubscriptionInfo_expiresAt(ctx, field, obj)
+		case "createdAt":
+			out.Values[i] = ec._SubscriptionInfo_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
 	}
 
-	switch fields[0].Name {
-	case "plan":
-		return ec._Subscription_plan(ctx, fields[0])
-	case "status":
-		return ec._Subscription_status(ctx, fields[0])
-	case "expiresAt":
-		return ec._Subscription_expiresAt(ctx, fields[0])
-	case "createdAt":
-		return ec._Subscription_createdAt(ctx, fields[0])
-	default:
-		panic("unknown field " + strconv.Quote(fields[0].Name))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
 	}
+
+	return out
 }
 
 var unauthenticatedErrorImplementors = []string{"UnauthenticatedError", "Error", "MeResult", "UpdateProfileResult"}
@@ -3610,28 +3610,6 @@ func (ec *executionContext) marshalNDateTime2timeᚐTime(ctx context.Context, se
 	return res
 }
 
-func (ec *executionContext) unmarshalNDateTime2ᚖtimeᚐTime(ctx context.Context, v any) (*time.Time, error) {
-	res, err := graphql.UnmarshalTime(v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNDateTime2ᚖtimeᚐTime(ctx context.Context, sel ast.SelectionSet, v *time.Time) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	_ = sel
-	res := graphql.MarshalTime(*v)
-	if res == graphql.Null {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
-		}
-	}
-	return res
-}
-
 func (ec *executionContext) unmarshalNID2string(ctx context.Context, v any) (string, error) {
 	res, err := graphql.UnmarshalID(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -3926,12 +3904,11 @@ func (ec *executionContext) marshalOString2ᚖstring(ctx context.Context, sel as
 	return res
 }
 
-func (ec *executionContext) marshalOSubscription2ᚖgithubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋbffᚋportsᚋgraphqlᚋmodelᚐSubscription(ctx context.Context, sel ast.SelectionSet, v *model.Subscription) graphql.Marshaler {
+func (ec *executionContext) marshalOSubscriptionInfo2ᚖgithubᚗcomᚋkfreimanᚋengineerᚑchallengeᚋinternalᚋbffᚋportsᚋgraphqlᚋmodelᚐSubscriptionInfo(ctx context.Context, sel ast.SelectionSet, v *model.SubscriptionInfo) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
-	res := ec._Subscription(ctx, sel)
-	return res(ctx)
+	return ec._SubscriptionInfo(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalO__EnumValue2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐEnumValueᚄ(ctx context.Context, sel ast.SelectionSet, v []introspection.EnumValue) graphql.Marshaler {

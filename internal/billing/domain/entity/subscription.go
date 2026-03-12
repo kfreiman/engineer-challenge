@@ -55,6 +55,14 @@ func (s *Subscription) Status() Status {
 	return s.status
 }
 
+func (s *Subscription) ExpiresAt() *time.Time {
+	return s.expiresAt
+}
+
+func (s *Subscription) CreatedAt() time.Time {
+	return s.createdAt
+}
+
 func (s *Subscription) ChangePlan(plan Plan) {
 	s.plan = plan
 }
