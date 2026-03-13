@@ -1,0 +1,98 @@
+services:
+  # Log Delivery - Vector.dev
+  orbitto_vector:
+    image: timberio/vector:0.54.X-alpine
+    container_name: orbitto_vector
+    volumes:
+      - ./infra/observability/vector/vector.yaml:/etc/vector/vector.yaml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    # ports:
+    #   - "9598:9598" # Metrics exporter
+    networks:
+      - orbitto_net
+    restart: unless-stopped
+    depends_on:
+      - orbitto_loki
+
+  # Logs - Grafana Loki
+  orbitto_loki:
+    image: grafana/loki:3.5.12
+    container_name: orbitto_loki
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./infra/observability/loki/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - orbitto_loki_data:/tmp/loki
+    # ports:
+    #   - "3100:3100"
+    networks:
+      - orbitto_net
+    restart: unless-stopped
+
+  # Metrics - Prometheus
+  orbitto_prometheus:
+    image: prom/prometheus:v3.10.0
+    container_name: orbitto_prometheus
+    volumes:
+      - ./infra/observability/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+      - orbitto_prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    # ports:
+    #   - "9090:9090"
+    networks:
+      - orbitto_net
+    restart: unless-stopped
+
+  # Traces - Grafana Tempo
+  orbitto_tempo:
+    image: grafana/tempo:latest
+    container_name: orbitto_tempo
+    command: ["-config.file=/etc/tempo/tempo-config.yaml"]
+    volumes:
+      - ./infra/observability/tempo/tempo-config.yaml:/etc/tempo/tempo-config.yaml:ro
+      - orbitto_tempo_data:/tmp/tempo
+    # ports:
+    #   - "3200:3200" # Tempo
+    #   - "4317:4317" # OTLP gRPC
+    #   - "4318:4318" # OTLP HTTP
+    networks:
+      - orbitto_net
+    restart: unless-stopped
+
+  # Dashboard - Grafana
+  orbitto_grafana:
+    image: grafana/grafana:latest
+    container_name: orbitto_grafana
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: true
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: true
+    volumes:
+      - ./infra/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - orbitto_grafana_data:/var/lib/grafana
+    # ports:
+    #   - "3000:3000"
+    networks:
+      - orbitto_net
+    restart: unless-stopped
+    depends_on:
+      - orbitto_loki
+      - orbitto_prometheus
+      - orbitto_tempo
+
+volumes:
+  orbitto_loki_data:
+    driver: local
+  orbitto_prometheus_data:
+    driver: local
+  orbitto_tempo_data:
+    driver: local
+  orbitto_grafana_data:
+    driver: local
+
+networks:
+  # TODO separate networks
+  orbitto_net:
+    external: true
+    name: orbitto_net

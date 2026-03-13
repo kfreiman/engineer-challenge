@@ -1,0 +1,26 @@
+# Tempo configuration for LGTM stack
+# Reference: https://grafana.com/docs/tempo/latest/configuration/
+
+server:
+  http_listen_port: 3200
+
+common:
+  storage:
+    filesystem:
+      chunks_directory: /tmp/tempo/chunks
+      rules_directory: /tmp/tempo/rules
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+
+storage:
+  trace:
+    backend: local
+    local:
+      path: /tmp/tempo/traces

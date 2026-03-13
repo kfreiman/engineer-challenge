@@ -1,0 +1,17 @@
+# Prometheus configuration for LGTM stack
+# Reference: https://prometheus.io/docs/prometheus/latest/configuration/configuration/
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Scrape Vector internal metrics
+  - job_name: "vector"
+    static_configs:
+      - targets: ["orbitto_vector:9598"]
+
+  # Scrape Traefik metrics (if enabled)
+  - job_name: "traefik"
+    static_configs:
+      - targets: ["orbitto_traefik:8080"]

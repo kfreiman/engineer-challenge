@@ -1,0 +1,45 @@
+# Vector configuration for LGTM stack
+# Reference: https://vector.dev/docs/
+
+data_dir: /var/lib/vector
+
+sources:
+  # Internal Vector metrics
+  vector_metrics:
+    type: internal_metrics
+
+  # Docker logs
+  docker_logs:
+    type: docker_logs
+    include_containers:
+      - orbitto_core
+      - orbitto_kratos
+      - orbitto_traefik
+
+transforms:
+  # Parse JSON logs if possible, otherwise keep as is
+  parsed_logs:
+    type: remap
+    inputs:
+      - docker_logs
+    source: |
+      . = parse_json(.message) ?? .
+      .service = .container_name
+
+sinks:
+  # Send logs to Loki
+  loki_sink:
+    type: loki
+    inputs:
+      - parsed_logs
+    endpoint: http://orbitto_loki:3100
+    labels:
+      service: "{{ service }}"
+      container: "{{ container_name }}"
+
+  # Send metrics to Prometheus (Vector acts as a scrape target)
+  prometheus_sink:
+    type: prometheus_exporter
+    inputs:
+      - vector_metrics
+    address: 0.0.0.0:9598
