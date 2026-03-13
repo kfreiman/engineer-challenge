@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.4.4](https://github.com/kfreiman/engineer-challenge/compare/v0.4.3...v0.4.4) (2026-03-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* **logger:** Logger interface changed from slog.Logger wrapper to
+zerolog-based implementation. Services now use logger.New(Config) instead
+of logger.New(slogLogger). Log format and level can be configured via
+environment variables (ORBITTO_CORE_LOG_LEVEL, format options).
+
+* **logger:** migrate from slog to zerolog with configuration support ([166ea71](https://github.com/kfreiman/engineer-challenge/commit/166ea711b99259ab5094ffb6d3a28d43e394011e))
+
 ## [0.4.3](https://github.com/kfreiman/engineer-challenge/compare/v0.4.2...v0.4.3) (2026-03-13)
 
 
