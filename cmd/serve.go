@@ -13,6 +13,7 @@ import (
 	bffhttp "github.com/kfreiman/engineer-challenge/internal/bff/ports/http"
 	billinglocal "github.com/kfreiman/engineer-challenge/internal/billing/ports/local"
 	billingservice "github.com/kfreiman/engineer-challenge/internal/billing/service"
+	"github.com/kfreiman/engineer-challenge/internal/logger"
 	profilehttp "github.com/kfreiman/engineer-challenge/internal/profile/ports/http"
 	profileservice "github.com/kfreiman/engineer-challenge/internal/profile/service"
 
@@ -26,8 +27,8 @@ type httpConfig struct {
 }
 
 type serveConfig struct {
-	Logger loggerConfig `env-prefix:"LOG_" json:"logger"`
-	HTTP   httpConfig   `env-prefix:"HTTP_" json:"http"`
+	Logger logger.Config `env-prefix:"LOG_" json:"logger"`
+	HTTP   httpConfig    `env-prefix:"HTTP_" json:"http"`
 }
 
 // serveCmd represents the serve command
@@ -45,16 +46,20 @@ var serveCmd = &cobra.Command{
 			return err
 		}
 
-		// create logger
-		logger := createLogger(conf.Logger)
+		// create log
+		log := logger.New(conf.Logger)
 
-		billingApp := billingservice.NewApplication(logger)
+		billingApp := billingservice.NewApplication(log)
 		billingService := billinglocal.NewBillingService(billingApp)
 
-		profileApp := profileservice.NewApplication(logger)
+		profileApp := profileservice.NewApplication(log)
 		profileMux := profilehttp.NewRouter(profileApp, billingService)
+		profileMux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK) // TODO refactor
+			w.Write([]byte("OK"))
+		})
 
-		bffMux, bffResolver := bffhttp.NewRouter(logger)
+		bffMux, bffResolver := bffhttp.NewRouter(log)
 		bffResolver.ProfileApp = profileApp
 		bffResolver.BillingApp = billingApp
 
@@ -77,9 +82,9 @@ var serveCmd = &cobra.Command{
 			}
 
 			g.Go(func() error {
-				logger.InfoContext(ctx, fmt.Sprintf("%s server starting", s.name), "port", s.port)
+				log.InfoContext(ctx, fmt.Sprintf("%s server starting", s.name), "port", s.port)
 				if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-					logger.ErrorContext(ctx, fmt.Sprintf("%s server error", s.name), "error", err)
+					log.ErrorContext(ctx, fmt.Sprintf("%s server error", s.name), "error", err)
 					return err
 				}
 				return nil
@@ -87,7 +92,7 @@ var serveCmd = &cobra.Command{
 
 			g.Go(func() error {
 				<-ctx.Done()
-				logger.InfoContext(ctx, fmt.Sprintf("Shutting down %s server", s.name))
+				log.InfoContext(ctx, fmt.Sprintf("Shutting down %s server", s.name))
 				shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
 				defer shutdownCancel()
 				return srv.Shutdown(shutdownCtx)

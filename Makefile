@@ -1,153 +1,119 @@
-.PHONY: help start dev up down build logs generate proto clean commit-and-tag-version commit-and-tag-version-dry-run \
-	traefik traefik_logs kratos kratos_db kratos_db_logs kratos_app kratos_app_logs kratos_logs \
-	profile profile_logs billing billing_logs bff bff_logs
+# ============================================
+# Variables
+# ============================================
+
+.DEFAULT_GOAL := help
+SHELL := /bin/bash
+
+# Docker compose files
+COMPOSE_CORE := compose.yaml
+COMPOSE_DEV := compose.dev.yaml
+COMPOSE_OBS := compose.observability.yaml
+
+# Commands
+DOCKER_COMPOSE := docker compose
+DC_PROD := $(DOCKER_COMPOSE) -f $(COMPOSE_CORE)
+DC_DEV := $(DOCKER_COMPOSE) -f $(COMPOSE_CORE) -f $(COMPOSE_DEV)
+
+# Services
+SERVICES := traefik kratos_db kratos kratos_migrate core web mailpit billing bff profile
+
+# ============================================
+# Help Target
+# ============================================
 
 help: ## Show this help
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 # ============================================
-# Individual Service Commands (Production)
+# Main Life-cycle Commands
 # ============================================
 
-traefik: ## Start Traefik service only
-	docker compose up -d --force-recreate orbitto_traefik
+start: ## Start all services (production)
+	$(DC_PROD) up -d --force-recreate
 
-traefik_logs: ## Show Traefik logs
-	docker compose logs -f orbitto_traefik
+up: start ## Alias for start
 
-kratos_db: ## Start PostgreSQL service only
-	docker compose up -d --force-recreate orbitto_kratos_db
+dev: ## Start all services (development)
+	$(DC_DEV) up -d --force-recreate
 
-kratos_db_logs: ## Show PostgreSQL logs
-	docker compose logs -f orbitto_kratos_db
+down: ## Stop and remove all services (production)
+	$(DC_PROD) down -v
 
-kratos_app: ## Start Kratos service only
-	docker compose up -d --force-recreate orbitto_kratos
+down-dev: ## Stop and remove all services (dev)
+	$(DC_DEV) down -v
 
-kratos_app_logs: ## Show Kratos logs
-	docker compose logs -f orbitto_kratos
-
-kratos: ## Start all Kratos related services
-	docker compose up -d --force-recreate orbitto_kratos
-
-kratos_migrate: ## Migrate Kratos database schema attach to logs
-	docker compose up --force-recreate orbitto_kratos_migrate 
-
-kratos_logs: ## Show Kratos related services logs
-	docker compose logs -f  orbitto_kratos
-
-profile: ## Start Profile service only
-	docker compose up -d --force-recreate orbitto_profile
-
-profile_logs: ## Show Profile logs
-	docker compose logs -f orbitto_profile
-
-billing: ## Start Billing service only
-	docker compose up -d --force-recreate orbitto_billing
-
-billing_logs: ## Show Billing logs
-	docker compose logs -f orbitto_billing
-
-bff: ## Start BFF service only
-	docker compose up -d --force-recreate orbitto_bff
-
-bff_logs: ## Show BFF logs
-	docker compose logs -f orbitto_bff
-
-# ============================================
-# Combined Commands (Production)
-# ============================================
-
-start: ## Start all services (production mode)
-	docker compose up -d --force-recreate
-
-start_logs: ## Start all services and follow logs
-	docker compose up
-
-# ============================================
-# Development Commands
-# ============================================
-
-dev: ## Start all services in development mode
-	docker compose -f compose.yaml -f compose.dev.yaml up -d --force-recreate
-
-# Individual Development Commands
-dev_traefik: ## Start Traefik in development mode
-	docker compose -f compose.yaml -f compose.dev.yaml up -d --force-recreate orbitto_traefik
-
-dev_kratos_db: ## Start Kratos DB in development mode
-	docker compose -f compose.yaml -f compose.dev.yaml up -d --force-recreate orbitto_kratos_db
-
-dev_kratos_app: ## Start Kratos service in development mode
-	docker compose -f compose.yaml -f compose.dev.yaml up -d --force-recreate orbitto_kratos
-
-dev_kratos: ## Start all Kratos related services in development mode
-	docker compose -f compose.yaml -f compose.dev.yaml up -d --force-recreate orbitto_kratos
-
-dev_profile: ## Start Profile service in development mode
-	docker compose -f compose.yaml -f compose.dev.yaml up -d --force-recreate orbitto_profile
-
-dev_billing: ## Start Billing service in development mode
-	docker compose -f compose.yaml -f compose.dev.yaml up -d --force-recreate orbitto_billing
-
-dev_bff: ## Start BFF service in development mode
-	docker compose -f compose.yaml -f compose.dev.yaml up -d --force-recreate orbitto_bff
-
-dev_web: ## Start web service in development mode
-	docker compose -f compose.yaml -f compose.dev.yaml up -d --force-recreate orbitto_web
-
-dev_mailpit: ## Show logs for all services (development mode)
-	docker compose -f compose.yaml -f compose.dev.yaml up -d --force-recreate orbitto_mailpit
-
-mailpit_logs: ## Show mailpit logs
-	docker compose logs -f orbitto_mailpit
-
-# ============================================
-# Standard Commands
-# ============================================
-
-up: ## Start all services with docker-compose (alias for start)
-	docker compose -f compose.yaml up -d --force-recreate
-
-up_dev: ## Start all services in development mode (alias for dev)
-	docker compose -f compose.yaml -f compose.dev.yaml up -d --force-recreate
-
-down: ## Stop all services
-	docker compose down -v
-
-down_dev: ## Stop all services (including dev overrides)
-	docker compose -f compose.yaml -f compose.dev.yaml down -v
+stop: ## Stop all services without removing
+	$(DOCKER_COMPOSE) stop
 
 build: ## Build docker images
-	docker compose build
+	$(DC_PROD) build
 
-build_dev: ## Build docker images (development mode)
-	docker compose -f compose.yaml -f compose.dev.yaml build
+build-dev: ## Build docker images (development)
+	$(DC_DEV) build
 
 logs: ## Show logs for all services
-	docker compose logs -f
+	$(DC_PROD) logs -f
 
-logs_dev: ## Show logs for all services (development mode)
-	docker compose -f compose.yaml -f compose.dev.yaml logs -f
+logs-dev: ## Show logs for all services (development)
+	$(DC_DEV) logs -f
 
 # ============================================
-# Code Generation
+# Individual Service Management
+# ============================================
+
+define service_rules
+$(1): ## Start $(1) (production)
+	$(DC_PROD) up -d --force-recreate orbitto_$(1)
+
+$(1)-dev: ## Start $(1) (development)
+	$(DC_DEV) up -d --force-recreate orbitto_$(1)
+
+$(1)-logs: ## Show logs for $(1)
+	$(DOCKER_COMPOSE) logs -f orbitto_$(1)
+endef
+
+$(foreach svc,$(SERVICES),$(eval $(call service_rules,$(svc))))
+
+# ============================================
+# Code Quality & Testing
+# ============================================
+
+test: test-go test-web ## Run all tests
+
+test-go: ## Run Go backend tests
+	go test -v ./...
+
+test-web: ## Run frontend unit tests
+	cd web && pnpm test
+
+test-e2e: ## Run E2E tests
+	npx playwright test
+
+lint: ## Run linters
+	golangci-lint run
+	cd web && pnpm lint
+
+# ============================================
+# Code Generation & Versioning
 # ============================================
 
 proto: ## Generate protobuf definitions
-	# Placeholder for protoc command
 	@echo "Generating protobuf files..."
 
 generate: proto ## Run all code generation
-	# Placeholder for gqlgen commands
 	@echo "Generating GraphQL resolvers..."
 
-# ============================================
-# Versioning & Release
-# ============================================
-
-release: ## Create version commit and tag (interactively)
+release: ## Create version commit and tag
 	npx commit-and-tag-version
 
-release_dry: ## Create version commit and tag (dry-run preview only)
+release-dry: ## Create version commit and tag (dry-run)
 	npx commit-and-tag-version --dry-run
+
+clean: ## Clean project artifacts and docker images
+	rm -rf tmp/ web/dist/ node_modules/ web/node_modules
+	$(DC_PROD) down -v --rmi local --remove-orphans
+
+.PHONY: help start dev up down down-dev stop build build-dev logs logs-dev  \
+	test test-go test-web test-e2e lint \
+	proto generate release release-dry clean $(SERVICES)

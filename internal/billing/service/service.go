@@ -1,17 +1,14 @@
 package service
 
 import (
-	"log/slog"
-
-	"github.com/kfreiman/engineer-challenge/internal/logger"
 	"github.com/kfreiman/engineer-challenge/internal/billing/adapters"
 	"github.com/kfreiman/engineer-challenge/internal/billing/app"
 	"github.com/kfreiman/engineer-challenge/internal/billing/app/command"
 	"github.com/kfreiman/engineer-challenge/internal/billing/app/query"
+	"github.com/kfreiman/engineer-challenge/internal/logger"
 )
 
-func NewApplication(slogLogger *slog.Logger) app.Application {
-	log := logger.New(slogLogger)
+func NewApplication(log logger.Logger) app.Application {
 	repo := adapters.NewInMemorySubscriptionRepository()
 
 	return app.Application{

@@ -16,6 +16,11 @@
       "sourceType": "github",
       "computedHash": "92b5f143d4d7f80a2fd5fe5421bccaa0ec35b1f9f4acdf3f71a019191cf3c4a4"
     },
+    "readme": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "computedHash": "4b7080c3d7f5ab0d672ad2198934f974e2fcd66fff088543b7b975068779de18"
+    },
     "tanstack-query": {
       "source": "tanstack-skills/tanstack-skills",
       "sourceType": "github",

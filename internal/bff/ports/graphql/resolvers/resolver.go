@@ -2,12 +2,12 @@ package resolvers
 
 import (
 	"context"
-	"log/slog"
 
 	"github.com/kfreiman/engineer-challenge/internal/bff/ports/graphql/model"
 	billingapp "github.com/kfreiman/engineer-challenge/internal/billing/app"
 	billingquery "github.com/kfreiman/engineer-challenge/internal/billing/app/query"
 	billingentity "github.com/kfreiman/engineer-challenge/internal/billing/domain/entity"
+	"github.com/kfreiman/engineer-challenge/internal/logger"
 	profileapp "github.com/kfreiman/engineer-challenge/internal/profile/app"
 	"github.com/kfreiman/engineer-challenge/internal/profile/domain/entity"
 )
@@ -15,7 +15,7 @@ import (
 type Resolver struct {
 	ProfileApp profileapp.Application
 	BillingApp billingapp.Application
-	Logger     *slog.Logger
+	Logger     logger.Logger
 }
 
 func mapSubscriptionToDTO(sub *billingentity.Subscription) *model.SubscriptionInfo {
@@ -52,7 +52,7 @@ func mapProfileToUserDTO(ctx context.Context, p *entity.Profile, billingApp bill
 		return nil, nil
 	}
 	fullName := p.FullName()
-	
+
 	sub, err := billingApp.Queries.GetSubscription.Handle(ctx, billingquery.GetSubscription{
 		IdentityID: p.ID(),
 	})

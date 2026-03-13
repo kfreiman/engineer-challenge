@@ -1,8 +1,6 @@
 package service
 
 import (
-	"log/slog"
-
 	"github.com/kfreiman/engineer-challenge/internal/logger"
 	"github.com/kfreiman/engineer-challenge/internal/profile/adapters"
 	"github.com/kfreiman/engineer-challenge/internal/profile/app"
@@ -10,17 +8,16 @@ import (
 	"github.com/kfreiman/engineer-challenge/internal/profile/app/query"
 )
 
-func NewApplication(slogLogger *slog.Logger) app.Application {
-	log := logger.New(slogLogger)
+func NewApplication(logger logger.Logger) app.Application {
 	repo := adapters.NewInMemoryProfileRepository()
 
 	return app.Application{
 		Commands: app.Commands{
-			InitializeProfile: command.NewInitializeProfileHandler(repo, log),
-			UpdateProfile:     command.NewUpdateProfileHandler(repo, log),
+			InitializeProfile: command.NewInitializeProfileHandler(repo, logger),
+			UpdateProfile:     command.NewUpdateProfileHandler(repo, logger),
 		},
 		Queries: app.Queries{
-			GetProfile: query.NewGetProfileHandler(repo, log),
+			GetProfile: query.NewGetProfileHandler(repo, logger),
 		},
 	}
 }

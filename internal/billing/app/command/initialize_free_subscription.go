@@ -3,9 +3,9 @@ package command
 import (
 	"context"
 
-	"github.com/kfreiman/engineer-challenge/internal/logger"
 	"github.com/kfreiman/engineer-challenge/internal/billing/domain"
 	"github.com/kfreiman/engineer-challenge/internal/billing/domain/entity"
+	"github.com/kfreiman/engineer-challenge/internal/logger"
 )
 
 type InitializeFreeSubscription struct {

@@ -17,6 +17,8 @@ services:
     networks:
       - orbitto_net
     restart: unless-stopped
+    ports:
+      - ${ORBITTO_TRAEFIK_EXPOSE_HTTP_PORT:-80}:80
     labels:
       - "traefik.enable=true"
     healthcheck:
@@ -118,6 +120,7 @@ services:
 
   # Core Service (ADR-006)
   orbitto_core:
+    image: orbitto_core:latest
     build:
       context: .
       dockerfile: infra/docker/core/Dockerfile
@@ -148,16 +151,15 @@ services:
 
   orbitto_web:
     container_name: orbitto_web
+    image: orbitto_web:latest
     build:
       context: ./web
       dockerfile: ../infra/docker/web/Dockerfile # Use the production Dockerfile
       args:
-        DIR: /app # Consistent WORKDIR
-    # image: orbitto_web:latest
+        - VITE_APP_AUTH_BASEURL=${ORBITTO_SCHEMA}${ORBITTO_HOSTNAME}
     environment:
       VITE_ALLOWED_HOSTS: ${ORBITTO_HOSTNAME}
       VITE_APP_AUTH_BASEURL: ${ORBITTO_SCHEMA}${ORBITTO_HOSTNAME}
-    command: pnpm run start # Explicitly set the start command
     networks:
       - orbitto_net
     restart: unless-stopped

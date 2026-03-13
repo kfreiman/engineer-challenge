@@ -14,6 +14,7 @@ RUN go build -o core main.go
 
 # Run stage
 FROM alpine:latest
+RUN apk --no-cache add wget
 WORKDIR /app
 COPY --from=builder /app/core /app/core
 
